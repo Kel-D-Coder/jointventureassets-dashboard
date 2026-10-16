@@ -4,6 +4,7 @@ import { listings, messages, requests } from "@/lib/mockApi";
 import { accounts, inboxEnquiries, listingSubmissions } from "@/lib/inboxApi";
 import { useResource } from "@/hooks/useResource";
 import { Avatar } from "@/components/Avatar";
+import { PersonLink } from "@/components/PersonLink";
 import { RequestStatusPill } from "@/components/StatusPills";
 import { requestStatusLabel, requestTypeLabel } from "@/data/labels";
 import { formatNairaShort, timeAgo } from "@/lib/format";
@@ -92,17 +93,18 @@ export default function OverviewPage() {
           ) : (
             <ul className="divide-y divide-fg/8">
               {pending.slice(0, 5).map((request) => (
-                <li key={request.id}>
-                  <Link to={`/requests/${request.id}`} className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-surface">
-                    <Avatar name={request.fullName} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-fg">{request.title}</p>
-                      <p className="truncate text-xs text-muted">
-                        {request.fullName} · {requestTypeLabel[request.requestType]} · {formatNairaShort(request.budget)}
-                      </p>
-                    </div>
-                    <p className="shrink-0 text-xs text-muted">{timeAgo(request.createdAt)}</p>
-                  </Link>
+                <li key={request.id} className="flex items-center gap-3 py-3">
+                  <Avatar name={request.fullName} />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/requests/${request.id}`} className="block truncate text-sm font-semibold text-fg hover:underline">
+                      {request.title}
+                    </Link>
+                    <p className="truncate text-xs text-muted">
+                      <PersonLink name={request.fullName} email={request.email} userId={request.userId} /> · {requestTypeLabel[request.requestType]} ·{" "}
+                      {formatNairaShort(request.budget)}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-xs text-muted">{timeAgo(request.createdAt)}</p>
                 </li>
               ))}
             </ul>
@@ -187,7 +189,9 @@ export default function OverviewPage() {
               <li key={user.id} className="flex items-center gap-3 py-2.5">
                 <Avatar name={user.fullName} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-fg">{user.fullName}</p>
+                  <Link to={`/users/${user.id}`} className="block truncate text-sm font-semibold text-fg hover:underline">
+                    {user.fullName}
+                  </Link>
                   <p className="truncate text-xs text-muted">
                     {user.role} · {user.category}
                   </p>

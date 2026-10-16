@@ -57,7 +57,7 @@ export default function DraftsPage() {
             const missing = missingFor(draft);
             const percent = completeness(draft);
             return (
-              <li key={draft.id} className="flex flex-col gap-4 rounded-2xl border border-fg/8 bg-raised p-4 sm:flex-row sm:items-center">
+              <li key={draft.id} className="flex flex-col gap-4 rounded-xl border border-fg/[0.08] bg-raised p-4 sm:flex-row sm:items-center">
                 {draft.images[0] ? (
                   <img src={draft.images[0]} alt="" className="h-24 w-full shrink-0 rounded-xl object-cover sm:w-36" />
                 ) : (

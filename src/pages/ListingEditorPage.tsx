@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowUpRightFromSquare, FaFloppyDisk, FaTrashCan } from "react-icons/fa6";
 import { listings, type ListingInput } from "@/lib/mockApi";
 import { listingSubmissions } from "@/lib/inboxApi";
 import { useAction } from "@/hooks/useResource";
 import { ImageUploader } from "@/components/ImageUploader";
+import { PersonLink } from "@/components/PersonLink";
+import { DealClosingFields } from "@/components/DealClosingFields";
+import { closingDraft, closingErrors, toClosing, type ClosingDraft, type ClosingErrors } from "@/lib/closing";
 import { COMPANY_OWNER, missingFor, type CheckedField } from "@/lib/listingChecks";
 import { listingStatusLabel, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/data/labels";
 import { websiteUrl } from "@/data/site";
@@ -37,7 +40,11 @@ interface Draft {
   /** "company" lists it under Joint Venture Assets; "other" uses `ownerName`. */
   ownerMode: "company" | "other";
   ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string;
   status: ListingStatus;
+  /** Filled in when the status is "closed". */
+  closing: ClosingDraft;
   featured: boolean;
   verified: boolean;
   /** The website listing submission this came from, if any. */
@@ -66,7 +73,10 @@ const emptyDraft: Draft = {
   duration: "",
   ownerMode: "company",
   ownerName: "",
+  ownerEmail: "",
+  ownerPhone: "",
   status: "draft",
+  closing: closingDraft(),
   featured: false,
   verified: false,
 };
@@ -104,7 +114,10 @@ function draftFromListing(listing: Listing): Draft {
     duration: listing.jv?.duration ?? "",
     ownerMode: isCompany ? "company" : "other",
     ownerName: isCompany ? "" : listing.ownerName,
+    ownerEmail: listing.ownerEmail ?? "",
+    ownerPhone: listing.ownerPhone ?? "",
     status: listing.status,
+    closing: closingDraft(listing.closing, listing.price),
     featured: listing.featured,
     verified: listing.verified,
     sourceSubmissionId: listing.sourceSubmissionId,
@@ -134,6 +147,9 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     duration: listing.jv?.duration ?? "",
     ownerMode: listing.ownerName === COMPANY_OWNER ? "company" : "other",
     ownerName: listing.ownerName === COMPANY_OWNER ? "" : listing.ownerName,
+    // The person who submitted is the contact, whether they're the owner or acting for them.
+    ownerEmail: submission.contact.email,
+    ownerPhone: submission.contact.phoneNumber,
     sourceSubmissionId: submission.id,
   };
 }
@@ -155,6 +171,8 @@ function draftFromRequest(request: PartnerRequest): Draft {
     duration: request.timeline,
     ownerMode: "other",
     ownerName: request.fullName,
+    ownerEmail: request.email,
+    ownerPhone: request.phoneNumber,
     verified: true,
   };
 }
@@ -185,7 +203,10 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
           }
         : undefined,
     ownerName: draft.ownerMode === "company" ? COMPANY_OWNER : draft.ownerName.trim(),
+    ownerEmail: draft.ownerMode === "company" ? undefined : draft.ownerEmail.trim() || undefined,
+    ownerPhone: draft.ownerMode === "company" ? undefined : draft.ownerPhone.trim() || undefined,
     status,
+    closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
     verified: draft.verified,
     sourceSubmissionId: draft.sourceSubmissionId,
@@ -199,6 +220,9 @@ export default function ListingEditorPage() {
   const state = useLocation().state as { fromRequest?: PartnerRequest; fromSubmission?: ListingSubmission } | null;
   const fromRequest = state?.fromRequest;
   const fromSubmission = state?.fromSubmission;
+  // "Record a closed deal" opens a listing with ?close=1.
+  const [searchParams] = useSearchParams();
+  const closeRequested = searchParams.get("close") === "1";
 
   const [draft, setDraft] = useState<Draft>(() =>
     fromSubmission ? draftFromSubmission(fromSubmission) : fromRequest ? draftFromRequest(fromRequest) : emptyDraft,
@@ -207,6 +231,7 @@ export default function ListingEditorPage() {
   const [errors, setErrors] = useState<Partial<Record<CheckedField, string>>>({});
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [closingProblems, setClosingProblems] = useState<ClosingErrors>({});
 
   const save = useAction(
     (input: ListingInput) => (listingId ? listings.update(listingId, input) : listings.create(input)),
@@ -218,10 +243,15 @@ export default function ListingEditorPage() {
     if (!listingId) return;
     listings
       .get(listingId)
-      .then((listing) => setDraft(draftFromListing(listing)))
+      .then((listing) => {
+        setDraft(closeRequested && listing.status !== "draft" ? { ...draftFromListing(listing), status: "closed" } : draftFromListing(listing));
+        if (closeRequested && listing.status !== "closed") {
+          setNotice({ tone: "success", text: "Marked as closed. Fill in the closing details below, then save." });
+        }
+      })
       .catch((caught: Error) => setNotice({ tone: "error", text: caught.message }))
       .finally(() => setLoading(false));
-  }, [listingId]);
+  }, [listingId, closeRequested]);
 
   const isDraft = draft.status === "draft";
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => ({ ...current, [key]: value }));
@@ -244,7 +274,7 @@ export default function ListingEditorPage() {
         }
       }
       setNotice({ tone: "success", text });
-      if (isNew) navigate(`/listings/${saved.id}`, { replace: true });
+      if (isNew || closeRequested) navigate(`/listings/${saved.id}`, { replace: true });
     } catch (caught) {
       setNotice({ tone: "error", text: (caught as Error).message });
     }
@@ -261,11 +291,17 @@ export default function ListingEditorPage() {
     event.preventDefault();
     const status = isDraft ? "published" : draft.status;
     const missing = missingFor(toInput(draft, status));
+    const closingProblemsNow = status === "closed" ? closingErrors(draft.closing) : {};
+    setClosingProblems(closingProblemsNow);
     // The proposal is optional, but "Yes" needs the proposal written in.
     if (draft.dealType === "jv" && draft.hasProposal === "yes" && !draft.proposal.trim()) {
       missing.push({ field: "proposal", label: "Proposal", message: "Describe the proposal, or choose No.", passes: () => false });
     }
     setErrors(Object.fromEntries(missing.map((check) => [check.field, check.message])));
+    if (Object.keys(closingProblemsNow).length) {
+      setNotice({ tone: "error", text: "Fill in the closing details: when it closed, who with, and the agreed amount." });
+      return;
+    }
     if (missing.length) {
       setNotice({
         tone: "error",
@@ -273,7 +309,10 @@ export default function ListingEditorPage() {
       });
       return;
     }
-    void persist(status, isDraft ? "Published. It's now live on the website." : "Changes saved.");
+    void persist(
+      status,
+      isDraft ? "Published. It's now live on the website." : status === "closed" ? "Saved. The deal is on the Closed deals page." : "Changes saved.",
+    );
   };
 
   const handleDelete = async () => {
@@ -322,6 +361,22 @@ export default function ListingEditorPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
+          {draft.status === "closed" ? (
+            <Card className="border-success/30">
+              <CardTitle
+                hint="Shown on the Closed deals page."
+                action={
+                  <Link to="/closed-deals" className="text-sm font-semibold text-gold-deep hover:underline">
+                    Closed deals
+                  </Link>
+                }
+              >
+                Closing details
+              </CardTitle>
+              <DealClosingFields value={draft.closing} onChange={(closing) => set("closing", closing)} errors={closingProblems} dealType={draft.dealType} />
+            </Card>
+          ) : null}
+
           <Card>
             <CardTitle hint="Joint venture: the owner wants a development partner. For sale: an outright purchase.">Deal</CardTitle>
             <Tabs
@@ -459,8 +514,23 @@ export default function ListingEditorPage() {
                 </div>
                 {draft.ownerMode === "other" ? (
                   <Field label="Owner's name" error={errors.ownerName} className="mt-3">
-                    <input value={draft.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="Person or company" autoFocus className={inputClass} />
+                    <input value={draft.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="Person or company" className={inputClass} />
                   </Field>
+                ) : null}
+                {draft.ownerMode === "other" ? (
+                  <>
+                    <Field label="Owner's email" className="mt-3">
+                      <input type="email" value={draft.ownerEmail} onChange={(e) => set("ownerEmail", e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="Owner's phone" hint="Only the JVA team sees these." className="mt-3">
+                      <input type="tel" value={draft.ownerPhone} onChange={(e) => set("ownerPhone", e.target.value)} className={inputClass} />
+                    </Field>
+                    {draft.ownerName.trim() && draft.ownerEmail.trim() ? (
+                      <p className="mt-2 text-xs text-muted">
+                        <PersonLink name={draft.ownerName.trim()} email={draft.ownerEmail.trim()} showRole className="font-semibold text-fg" />
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
               </fieldset>
 

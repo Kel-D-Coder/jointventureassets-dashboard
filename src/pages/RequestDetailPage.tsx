@@ -1,10 +1,11 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
-import { FaArrowLeft, FaCheck, FaEnvelope, FaPhone, FaPlus, FaXmark } from "react-icons/fa6";
+import { FaArrowLeft, FaCheck, FaPlus, FaXmark } from "react-icons/fa6";
 import { requests } from "@/lib/mockApi";
 import { inboxEnquiries } from "@/lib/inboxApi";
 import { useAction, useResource } from "@/hooks/useResource";
-import { Avatar } from "@/components/Avatar";
+import { ContactCard } from "@/components/ContactCard";
+import { PersonLink } from "@/components/PersonLink";
 import { RequestStatusPill } from "@/components/StatusPills";
 import { requestTypeLabel } from "@/data/labels";
 import { formatDateTime, formatNaira, negotiableText, premiumText } from "@/lib/format";
@@ -61,7 +62,12 @@ export default function RequestDetailPage() {
       <PageHeader
         eyebrow={`${requestTypeLabel[request.requestType]} · ${request.id}`}
         title={request.title}
-        intro={`Submitted ${formatDateTime(request.createdAt)}`}
+        intro={
+          <>
+            From <PersonLink name={request.fullName} email={request.email} userId={request.userId} className="font-semibold text-fg" /> ·{" "}
+            {formatDateTime(request.createdAt)}
+          </>
+        }
         action={<RequestStatusPill status={request.status} />}
       />
 
@@ -106,25 +112,18 @@ export default function RequestDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardTitle>Submitted by</CardTitle>
-            <div className="flex items-center gap-3">
-              <Avatar name={request.fullName} />
-              <p className="font-semibold text-fg">{request.fullName}</p>
-            </div>
-            <div className="mt-4 space-y-2 text-sm">
-              <a href={`mailto:${request.email}`} className="flex items-center gap-2 text-muted hover:text-fg">
-                <FaEnvelope aria-hidden="true" /> {request.email}
-              </a>
-              <a href={`tel:${request.phoneNumber.replace(/\s/g, "")}`} className="flex items-center gap-2 text-muted hover:text-fg">
-                <FaPhone aria-hidden="true" /> {request.phoneNumber}
-              </a>
-            </div>
-          </Card>
+          <ContactCard
+            title="Submitted by"
+            name={request.fullName}
+            email={request.email}
+            phone={request.phoneNumber}
+            userId={request.userId}
+            emailSubject={`Your request: ${request.title}`}
+          />
 
           <Card>
             <CardTitle hint="Members asking to be introduced, from Browse requests on the website.">Enquiries</CardTitle>
-            <p className="font-display text-3xl text-fg">{enquiryCount}</p>
+            <p className="text-3xl font-bold text-fg tabular-nums">{enquiryCount}</p>
             <Link to={`/enquiries?request=${request.id}`} className="mt-2 inline-block text-sm font-semibold text-gold-deep hover:underline">
               {enquiryCount ? "View enquiries" : "Open enquiries"}
             </Link>

@@ -224,7 +224,7 @@ function TemplateEditor({ template }: { template: DocumentTemplate }) {
           ))}
         </div>
 
-        <div className="overflow-x-auto rounded-2xl bg-fg/4 p-4 sm:p-8 print:overflow-visible print:bg-transparent print:p-0">
+        <div className="overflow-x-auto rounded-xl bg-fg/4 p-4 sm:p-8 print:overflow-visible print:bg-transparent print:p-0">
           <TemplatePreview template={template} values={values} />
         </div>
       </div>

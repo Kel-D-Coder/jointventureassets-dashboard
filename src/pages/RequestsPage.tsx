@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { requests } from "@/lib/mockApi";
 import { useResource } from "@/hooks/useResource";
 import { Avatar } from "@/components/Avatar";
+import { PersonLink } from "@/components/PersonLink";
 import { RequestStatusPill } from "@/components/StatusPills";
 import { requestTypeLabel } from "@/data/labels";
 import { formatDate, formatNairaShort } from "@/lib/format";
-import { EmptyState, Notice, PageHeader, SkeletonRows, Table, Tabs, inputClass } from "@/ui";
+import { EmptyState, Notice, PageHeader, RowLink, SkeletonRows, Table, Tabs, inputClass } from "@/ui";
 import type { RequestStatus, RequestType } from "@/types";
 
 type StatusFilter = RequestStatus | "all";
@@ -85,6 +86,7 @@ export default function RequestsPage() {
           head={
             <>
               <th>Request</th>
+              <th>From</th>
               <th>Type</th>
               <th>Budget</th>
               <th>Status</th>
@@ -93,17 +95,18 @@ export default function RequestsPage() {
           }
         >
           {visible.map((request) => (
-            <tr key={request.id} className="hover:bg-surface/60">
+            <RowLink key={request.id} to={`/requests/${request.id}`}>
               <td>
                 <Link to={`/requests/${request.id}`} className="flex items-center gap-3">
                   <Avatar name={request.fullName} size="sm" />
                   <span className="min-w-0">
                     <span className="block max-w-sm truncate font-semibold text-fg hover:underline">{request.title}</span>
-                    <span className="block truncate text-xs text-muted">
-                      {request.fullName} · {request.location}
-                    </span>
+                    <span className="block truncate text-xs text-muted">{request.location}</span>
                   </span>
                 </Link>
+              </td>
+              <td className="whitespace-nowrap">
+                <PersonLink name={request.fullName} email={request.email} userId={request.userId} className="font-medium text-fg" />
               </td>
               <td className="whitespace-nowrap text-muted">{requestTypeLabel[request.requestType]}</td>
               <td className="whitespace-nowrap font-semibold text-fg tabular-nums">{formatNairaShort(request.budget)}</td>
@@ -111,7 +114,7 @@ export default function RequestsPage() {
                 <RequestStatusPill status={request.status} />
               </td>
               <td className="whitespace-nowrap text-muted">{formatDate(request.createdAt)}</td>
-            </tr>
+            </RowLink>
           ))}
         </Table>
       )}

@@ -116,7 +116,7 @@ function ListingCard({ listing, enquiries }: { listing: Listing; enquiries: numb
   return (
     <Link
       to={`/listings/${listing.id}`}
-      className="group block h-full overflow-hidden rounded-2xl border border-fg/8 bg-raised transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(14_17_22/0.25)]"
+      className="group block h-full overflow-hidden rounded-xl border border-fg/[0.08] bg-raised transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(14_17_22/0.25)]"
     >
       <div className="relative">
         <img src={listing.images[0]} alt="" className="aspect-16/10 w-full object-cover" />
@@ -135,6 +135,10 @@ function ListingCard({ listing, enquiries }: { listing: Listing; enquiries: numb
         <p className="font-display text-xl leading-snug text-fg group-hover:underline">{listing.title}</p>
         <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted">
           <FaLocationDot aria-hidden="true" /> {listing.area}, {listing.city}
+        </p>
+        <p className="mt-1 truncate text-xs text-muted">
+          {listing.ownerName}
+          {listing.ownerPhone ? ` · ${listing.ownerPhone}` : ""}
         </p>
         <div className="mt-4 flex items-end justify-between gap-3 border-t border-fg/8 pt-4">
           <div>

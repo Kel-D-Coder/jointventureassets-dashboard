@@ -17,7 +17,7 @@ export default function TemplatesPage() {
           <li key={template.id}>
             <Link
               to={`/templates/${template.id}`}
-              className="group flex h-full flex-col rounded-2xl border border-fg/8 bg-raised p-6 transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(14_17_22/0.25)]"
+              className="group flex h-full flex-col rounded-xl border border-fg/[0.08] bg-raised p-6 transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(14_17_22/0.25)]"
             >
               <span className="grid h-11 w-11 place-items-center rounded-xl bg-ink text-gold">
                 <FaFileContract aria-hidden="true" />

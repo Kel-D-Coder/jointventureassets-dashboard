@@ -1,4 +1,5 @@
-import type { DealType, ListingStatus, PropertyType, RequestStatus, RequestType } from "@/types";
+import type { PillTone } from "@/ui";
+import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PropertyType, RequestStatus, RequestType } from "@/types";
 
 export const dealTypeLabel: Record<DealType, string> = {
   jv: "Joint venture",
@@ -42,3 +43,12 @@ export const titleDocuments = [
 ];
 
 export const sharingFormulas = ["30/70", "35/65", "40/60", "50/50", "60/40"];
+
+export const enquiryStatusLabel: Record<EnquiryStatus, string> = { new: "New", contacted: "Contacted", closed: "Closed" };
+export const enquiryStatusTone: Record<EnquiryStatus, PillTone> = { new: "gold", contacted: "info", closed: "neutral" };
+
+export const submissionStatusLabel: Record<SubmissionStatus, string> = { draft: "Draft", pending: "Pending review", approved: "Approved", rejected: "Rejected" };
+export const submissionStatusTone: Record<SubmissionStatus, PillTone> = { draft: "neutral", pending: "warning", approved: "success", rejected: "danger" };
+
+export const accountStatusLabel: Record<AccountStatus, string> = { pending: "Awaiting approval", active: "Active", suspended: "Suspended" };
+export const accountStatusTone: Record<AccountStatus, PillTone> = { pending: "warning", active: "success", suspended: "danger" };

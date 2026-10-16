@@ -1,3 +1,5 @@
+import type { SubmittedDocument } from "./inbox";
+
 /** "jv" = joint-venture partnership on the land; "sale" = an outright purchase. */
 export type DealType = "jv" | "sale";
 
@@ -35,13 +37,33 @@ export interface Listing {
   images: string[];
   jv?: JvTerms;
   ownerName: string;
+  /** The owner's contact details. Admin only; the website never shows them. */
+  ownerEmail?: string;
+  ownerPhone?: string;
   status: ListingStatus;
   featured: boolean;
   verified: boolean;
   views: number;
   /** Set when the listing was created from a website listing submission. */
   sourceSubmissionId?: string;
+  /** Recorded when the listing is marked closed: who it closed with, for how much, and the signed documents. */
+  closing?: DealClosing;
   createdAt: string;
+}
+
+/** The record of a closed deal, kept on the listing. */
+export interface DealClosing {
+  /** ISO date and time the deal closed. */
+  closedAt: string;
+  /** The buyer (sale) or developer / investor (joint venture). */
+  counterparty: { name: string; email: string; phone: string };
+  /** Agreed sale price, or the agreed land value for a joint venture. Naira. */
+  finalAmount: number;
+  /** JVA's facilitation fee. Naira. */
+  facilitationFee: number;
+  /** Signed agreements, receipts and anything else used to close. */
+  documents: SubmittedDocument[];
+  notes: string;
 }
 
 export type RequestStatus = "pending" | "accepted" | "rejected";

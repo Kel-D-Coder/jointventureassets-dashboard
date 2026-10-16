@@ -9,10 +9,11 @@ import type { AccountStatus, EnquiryStatus, InboxEnquiry, ListingSubmission, Mem
 
 const BASE = websiteUrl("/api/demo-inbox");
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${BASE}${path}`, { ...init, headers: { "Content-Type": "application/json" } });
+    // Only requests with a body send JSON headers; a plain GET then needs no CORS preflight.
+    response = await fetch(`${BASE}${path}`, init?.body ? { ...init, headers: { "Content-Type": "application/json" } } : init);
   } catch {
     throw new Error(`Couldn't reach the website at ${websiteUrl()}. Enquiries and listing requests come from it, so start it with "npm run dev".`);
   }
@@ -21,11 +22,25 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+// Several parts of a page (the sidebar badges, the page itself) often ask for the same list at once; they share one request.
+const inFlight = new Map<string, Promise<unknown>>();
+
+function call<T>(path: string, init?: RequestInit): Promise<T> {
+  if (init?.method && init.method !== "GET") return request<T>(path, init);
+  let shared = inFlight.get(path) as Promise<T> | undefined;
+  if (!shared) {
+    shared = request<T>(path).finally(() => inFlight.delete(path));
+    inFlight.set(path, shared);
+  }
+  return shared.then((result) => structuredClone(result));
+}
+
 const patch = <T>(id: string, changes: object) =>
   call<T>(`/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(changes) });
 
 export const inboxEnquiries = {
   list: () => call<InboxEnquiry[]>("?kind=enquiry"),
+  get: (id: string) => call<InboxEnquiry>(`/${encodeURIComponent(id)}`),
   setStatus: (id: string, status: EnquiryStatus) => patch<InboxEnquiry>(id, { status }),
   remove: (id: string) => call<unknown>(`/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
@@ -33,6 +48,7 @@ export const inboxEnquiries = {
 export const listingSubmissions = {
   /** Drafts belong to the person still writing them, so the admin never sees them. */
   list: async () => (await call<ListingSubmission[]>("?kind=listing-submission")).filter((submission) => submission.status !== "draft"),
+  get: (id: string) => call<ListingSubmission>(`/${encodeURIComponent(id)}`),
   review: (id: string, changes: { status?: SubmissionStatus; reviewNote?: string; listingId?: string }) =>
     patch<ListingSubmission>(id, changes),
   remove: (id: string) => call<unknown>(`/${encodeURIComponent(id)}`, { method: "DELETE" }),
@@ -41,6 +57,7 @@ export const listingSubmissions = {
 /** Members who signed up on the website, with what they entered when registering. The admin account is left out. */
 export const accounts = {
   list: async () => (await call<MemberAccount[]>("?kind=account")).filter((account) => account.role !== "Admin"),
+  get: (id: string) => call<MemberAccount>(`/${encodeURIComponent(id)}`),
   setStatus: (id: string, status: AccountStatus) => patch<MemberAccount>(id, { status }),
 };
 

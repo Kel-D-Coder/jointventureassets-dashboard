@@ -52,7 +52,7 @@ export function TemplatePreview({ template, values }: { template: DocumentTempla
         return block.align === "center" ? (
           <header key={index} className="mb-8 flex flex-col items-center gap-2 border-b-2 border-gold pb-4 text-center">
             <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
-            <p className="font-display text-2xl text-gold-deep">{text("{{companyName}}")}</p>
+            <p className="font-serif text-2xl text-gold-deep">{text("{{companyName}}")}</p>
             <p className="text-xs text-muted">
               {text("{{companyAddress}}")} · {text("{{companyEmail}}")}
             </p>
@@ -61,7 +61,7 @@ export function TemplatePreview({ template, values }: { template: DocumentTempla
           <header key={index} className="mb-8 flex items-center gap-4 border-b-2 border-gold pb-4">
             <img src="/logo.png" alt="" className="h-14 w-14 object-contain" />
             <div>
-              <p className="font-display text-2xl text-gold-deep">{text("{{companyName}}")}</p>
+              <p className="font-serif text-2xl text-gold-deep">{text("{{companyName}}")}</p>
               <p className="text-xs text-muted">
                 {text("{{companyAddress}}")} · {text("{{companyEmail}}")}
               </p>
@@ -80,7 +80,7 @@ export function TemplatePreview({ template, values }: { template: DocumentTempla
         const details = block.details.filter((detail) => hasContent(template, detail, values));
         return (
           <header key={index} className="mb-8 border-b-2 border-fg/70 pb-4">
-            <p className="font-display text-2xl text-fg">{text(block.name)}</p>
+            <p className="font-serif text-2xl text-fg">{text(block.name)}</p>
             <p className="mt-1 text-xs text-muted">
               {details.map((detail, i) => (
                 <Fragment key={i}>
@@ -160,7 +160,7 @@ export function TemplatePreview({ template, values }: { template: DocumentTempla
     <article
       ref={article}
       aria-label={`${template.name} preview`}
-      className="relative mx-auto w-full max-w-[210mm] rounded-sm bg-white px-8 py-10 font-display text-[0.9375rem] leading-relaxed text-fg shadow-[0_10px_40px_-10px_rgb(14_17_22/0.25)] sm:px-14 sm:py-14 print:max-w-none print:p-0 print:shadow-none"
+      className="relative mx-auto w-full max-w-[210mm] rounded-sm bg-white px-8 py-10 font-serif text-[0.9375rem] leading-relaxed text-fg shadow-[0_10px_40px_-10px_rgb(14_17_22/0.25)] sm:px-14 sm:py-14 print:max-w-none print:p-0 print:shadow-none"
     >
       {watermark ? (
         <>

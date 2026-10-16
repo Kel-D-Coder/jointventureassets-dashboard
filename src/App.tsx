@@ -15,6 +15,12 @@ import EnquiriesPage from "@/pages/EnquiriesPage";
 import ListingRequestsPage from "@/pages/ListingRequestsPage";
 import TemplatesPage from "@/pages/TemplatesPage";
 import TemplateEditorPage from "@/pages/TemplateEditorPage";
+import ClosedDealsPage from "@/pages/ClosedDealsPage";
+import ClosedDealDetailPage from "@/pages/ClosedDealDetailPage";
+import EnquiryDetailPage from "@/pages/EnquiryDetailPage";
+import ListingRequestDetailPage from "@/pages/ListingRequestDetailPage";
+import MemberDetailPage from "@/pages/MemberDetailPage";
+import MessageDetailPage from "@/pages/MessageDetailPage";
 
 /** Sends signed-out visitors to the login page, remembering where they were headed. */
 function RequireSession({ children }: { children: ReactNode }) {
@@ -46,12 +52,18 @@ export default function App() {
         <Route path="listings/new" element={<ListingEditorPage />} />
         <Route path="listings/:listingId" element={<ListingEditorPage />} />
         <Route path="drafts" element={<DraftsPage />} />
+        <Route path="closed-deals" element={<ClosedDealsPage />} />
+        <Route path="closed-deals/:listingId" element={<ClosedDealDetailPage />} />
         <Route path="enquiries" element={<EnquiriesPage />} />
+        <Route path="enquiries/:enquiryId" element={<EnquiryDetailPage />} />
         <Route path="listing-requests" element={<ListingRequestsPage />} />
+        <Route path="listing-requests/:submissionId" element={<ListingRequestDetailPage />} />
         <Route path="templates" element={<TemplatesPage />} />
         <Route path="templates/:templateId" element={<TemplateEditorPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="users/:userId" element={<MemberDetailPage />} />
         <Route path="messages" element={<MessagesPage />} />
+        <Route path="messages/:messageId" element={<MessageDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

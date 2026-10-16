@@ -6,7 +6,7 @@
  * The functions are shaped like the real endpoints they replace, so swapping
  * this file for real HTTP calls later only touches this file.
  */
-import { seedListings } from "@/data/listings";
+import { addedSeedListingIds, seedListings } from "@/data/listings";
 import { seedMessages, seedRequests } from "@/data/seed";
 import { readStored, removeStored, writeStored } from "@/lib/storage";
 import type {
@@ -46,6 +46,17 @@ function loadDb(): Db {
 /** Copies JV premium / negotiable answers onto sample records saved before those fields existed. */
 function withNewSeedFields(db: Db): Db {
   const listingSeeds = new Map(seedListings.map((listing) => [listing.id, listing]));
+  for (const id of addedSeedListingIds) {
+    if (!db.listings.some((listing) => listing.id === id)) db.listings.push(structuredClone(listingSeeds.get(id)!));
+  }
+  for (const listing of db.listings) {
+    const seed = listingSeeds.get(listing.id);
+    if (seed && listing.ownerEmail === undefined && listing.ownerName === seed.ownerName) {
+      listing.ownerEmail = seed.ownerEmail;
+      listing.ownerPhone = seed.ownerPhone;
+    }
+    if (seed?.closing && !listing.closing && listing.status === "closed") listing.closing = structuredClone(seed.closing);
+  }
   for (const listing of db.listings) {
     const seed = listingSeeds.get(listing.id)?.jv;
     if (listing.jv && seed && listing.jv.sharingNegotiable === undefined && listing.jv.premium === undefined) {
@@ -163,6 +174,8 @@ export const listings = {
 
 export const messages = {
   list: () => simulate((db) => byNewest(db.messages)),
+
+  get: (id: string) => simulate((db) => find(db.messages, id, "message")),
 
   setRead: (id: string, read: boolean) =>
     simulate((db) => {

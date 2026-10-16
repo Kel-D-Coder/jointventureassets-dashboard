@@ -43,7 +43,7 @@ export default function LoginPage() {
           <img src="/logo.png" alt="Joint Venture Assets" width={500} height={500} className="h-20 w-20 object-contain" />
           <div>
             <p className="label text-gold">Admin console</p>
-            <p className="mt-3 max-w-md font-display text-4xl leading-tight text-fg">
+            <p className="mt-3 max-w-md font-serif text-4xl leading-tight text-fg">
               Review requests, publish listings and keep every partnership moving.
             </p>
           </div>
@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       <div className="grid place-items-center px-5 py-10">
         <div className="w-full max-w-sm">
-          <img src="/logo.png" alt="" width={500} height={500} className="theme-dark mx-auto h-20 w-20 rounded-2xl bg-ink object-contain p-2 lg:hidden" />
+          <img src="/logo.png" alt="" width={500} height={500} className="theme-dark mx-auto h-20 w-20 rounded-xl bg-ink object-contain p-2 lg:hidden" />
 
           <h1 className="mt-6 text-3xl text-fg lg:mt-0">Sign in</h1>
           <p className="mt-2 text-sm text-muted">Joint Venture Assets admin dashboard</p>

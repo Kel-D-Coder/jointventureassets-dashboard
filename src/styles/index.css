@@ -16,11 +16,11 @@
 
   /* Surface-relative roles. Light-page values; `theme-dark` (the sidebar)
      swaps in the inverted set below. */
-  --color-surface: #f5f3ee;
+  --color-surface: #f6f6f4;
   --color-raised: #ffffff;
-  --color-fg: #14171c;
-  --color-muted: #5b6270;
-  --color-ash: #9aa0aa;
+  --color-fg: #111418;
+  --color-muted: #5d6470;
+  --color-ash: #9ba1ab;
   --color-accent: #0e1116;
 
   /* Status colours — each keeps 4.5:1 as text on white and on its own /10 tint. */
@@ -29,7 +29,10 @@
   --color-danger: #b91c1c;
   --color-info: #1d4ed8;
 
-  --font-display: "Fraunces", Georgia, ui-serif, serif;
+  /* The console is set in Manrope throughout. Fraunces is kept for the brand
+     wordmark and for the documents the templates produce. */
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, ui-serif, serif;
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -52,18 +55,19 @@
     background-color: var(--color-surface);
     color: var(--color-fg);
     font-family: var(--font-sans);
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 0;
   }
 
   h1,
   h2,
   h3 {
     font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: -0.015em;
-    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
 
   /* Tailwind v4 leaves buttons on the default arrow cursor. */
@@ -92,10 +96,18 @@
 @utility label {
   font-family: var(--font-sans);
   font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1.2;
+}
+
+/* Scrolls without showing a scrollbar: the sidebar nav and the phone tab strip. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Printing a template (Templates → Print / save as PDF): only the document, on plain A4. */
