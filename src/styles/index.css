@@ -1,0 +1,111 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Joint Venture Assets admin — design tokens
+
+   Taken from the JVA logo: gold on near-black. The page is a warm ivory with
+   white cards; the sidebar is ink. Gold is a fill colour — it is too light to
+   carry text on ivory, so `gold-deep` is used wherever gold has to be read.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-ink: #0e1116;
+  --color-gold: #c9a24a;
+  --color-gold-soft: #f3e7c6;
+  --color-gold-deep: #7a5c14;
+
+  /* Surface-relative roles. Light-page values; `theme-dark` (the sidebar)
+     swaps in the inverted set below. */
+  --color-surface: #f5f3ee;
+  --color-raised: #ffffff;
+  --color-fg: #14171c;
+  --color-muted: #5b6270;
+  --color-ash: #9aa0aa;
+  --color-accent: #0e1116;
+
+  /* Status colours — each keeps 4.5:1 as text on white and on its own /10 tint. */
+  --color-success: #15803d;
+  --color-warning: #a16207;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+
+  --font-display: "Fraunces", Georgia, ui-serif, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+@utility theme-dark {
+  --color-surface: #0e1116;
+  --color-raised: #1a1f27;
+  --color-fg: #f1ede4;
+  --color-muted: #9aa1ad;
+  --color-ash: #626a77;
+  --color-accent: #c9a24a;
+  color: var(--color-fg);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+
+  /* Tailwind v4 leaves buttons on the default arrow cursor. */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  select {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background-color: var(--color-gold-soft);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* The small uppercase tag used for stat labels, table heads and eyebrows. */
+@utility label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* Printing a template (Templates → Print / save as PDF): only the document, on plain A4. */
+@page {
+  size: A4;
+  margin: 18mm;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+}
