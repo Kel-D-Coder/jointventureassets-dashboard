@@ -12,7 +12,7 @@ export interface ClosingDraft {
   documents: SubmittedDocument[];
 }
 
-export type ClosingErrors = Partial<Record<"closedAt" | "name" | "finalAmount", string>>;
+export type ClosingErrors = Partial<Record<"closedAt" | "finalAmount", string>>;
 
 /** The facilitation fee JVA charges: 10% of the land value or sale price. */
 export const FEE_RATE = 0.1;
@@ -53,7 +53,6 @@ export function toClosing(draft: ClosingDraft): DealClosing {
 export function closingErrors(draft: ClosingDraft): ClosingErrors {
   const errors: ClosingErrors = {};
   if (!draft.closedAt) errors.closedAt = "When did it close?";
-  if (!draft.name.trim()) errors.name = "Who did it close with?";
   if (!(Number(draft.finalAmount) > 0)) errors.finalAmount = "Enter the agreed amount.";
   return errors;
 }

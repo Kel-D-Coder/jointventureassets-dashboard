@@ -48,7 +48,7 @@ export function DealClosingFields({
       </Field>
 
       <p className="label pt-2 text-muted sm:col-span-2">{dealType === "jv" ? "Developer / investor" : "Buyer"}</p>
-      <Field label="Name" error={errors.name}>
+      <Field label="Name">
         <input value={value.name} onChange={(e) => set("name", e.target.value)} placeholder="Person or company" className={inputClass} />
       </Field>
       <Field label="Email">
