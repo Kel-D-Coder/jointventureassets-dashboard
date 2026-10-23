@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FaImage, FaPen, FaPlus, FaTrashCan } from "react-icons/fa6";
-import { listings } from "@/lib/mockApi";
+import { listings } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { DealTypePill } from "@/components/StatusPills";
 import { completeness, missingFor } from "@/lib/listingChecks";

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { SESSION_KEY, auth } from "@/lib/mockApi";
+import { SESSION_KEY, auth } from "@/lib/api";
 import { removeStored, useStored, writeStored } from "@/lib/storage";
 import type { AdminSession } from "@/types";
 
@@ -8,7 +8,8 @@ const NO_SESSION: AdminSession | null = null;
 /** The signed-in admin, or null when signed out or the session has expired. */
 export function useSession(): AdminSession | null {
   const stored = useStored(SESSION_KEY, NO_SESSION);
-  return useMemo(() => (stored && stored.expiresAt > Date.now() ? stored : null), [stored]);
+  // Sessions saved by the old demo login have no server token; they count as signed out.
+  return useMemo(() => (stored?.token && stored.expiresAt > Date.now() ? stored : null), [stored]);
 }
 
 /** Signs in and keeps the session in this browser. */

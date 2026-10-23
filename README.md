@@ -7,7 +7,7 @@ npm install
 npm run dev      # http://localhost:5175
 ```
 
-Sign in with the demo admin: **admin@jointventureassets.com / admin123** (the login page can fill it in for you).
+Sign in with the demo admin: **admin@jointventureassets.com / admin123** (the login page can fill it in for you) to try the demo enquiries and messages, or with a JVA admin account on the server for everything else.
 
 ## Pages
 
@@ -26,15 +26,15 @@ Sign in with the demo admin: **admin@jointventureassets.com / admin123** (the lo
 Templates live in `src/data/templates.ts`; add an entry there to add a new document. They are starting
 drafts — have a lawyer review them before first use.
 
-## Demo data
+## Data
 
-There is no backend connected. `src/lib/mockApi.ts` stands in for it: every call waits 300–700 ms like a
-network request, then reads or writes a small database in `localStorage` (seeded from `src/data/`), so
-changes survive a reload. Uploaded photos are resized and stored the same way (the browser allows about
-5 MB). **Reset demo data** in the sidebar restores the seed.
+Listings (including drafts and closed deals), listing requests, members' requests and users come from
+the JVA server's admin endpoints (`src/lib/api.ts`), so sign in with a JVA admin account to see them.
 
-To connect the real API later, replace the functions in `src/lib/mockApi.ts` with HTTP calls of the same
-shape — the pages and hooks don't need to change.
+The server has no endpoints yet for enquiries or contact messages. Signed in with the demo login, those
+two pages show demo data from `src/lib/demoApi.ts`, kept in `localStorage` so changes survive a reload;
+**Reset demo** in the top bar restores it. Nothing is sent to the server while you use the demo login;
+the other pages ask you to sign in with a JVA admin account instead.
 
 ## Settings
 

@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { requests } from "@/lib/mockApi";
+import { requests } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { Avatar } from "@/components/Avatar";
 import { PersonLink } from "@/components/PersonLink";
 import { RequestStatusPill } from "@/components/StatusPills";
 import { requestTypeLabel } from "@/data/labels";
+import { requestSummary } from "@/lib/requestBrief";
 import { formatDate, formatNairaShort } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, RowLink, SkeletonRows, Table, Tabs, inputClass } from "@/ui";
 import type { RequestStatus, RequestType } from "@/types";
@@ -15,7 +16,7 @@ type TypeFilter = RequestType | "all";
 
 export default function RequestsPage() {
   const { data = [], loading, error } = useResource(requests.list, "Couldn't load the requests. Try again.");
-  const [status, setStatus] = useState<StatusFilter>("pending");
+  const [status, setStatus] = useState<StatusFilter>("all");
   const [type, setType] = useState<TypeFilter>("all");
   const [query, setQuery] = useState("");
 
@@ -37,8 +38,9 @@ export default function RequestsPage() {
       <PageHeader
         eyebrow="Manage"
         title="Requests"
-        intro="Land offers, development briefs and partnership requests submitted by members. Accepted requests can be turned into listings."
+        intro="What members have asked us to find: joint ventures, land, property, development projects and professionals, with their budgets."
       />
+
 
       <div className="flex flex-wrap items-center gap-3">
         <Tabs
@@ -101,7 +103,7 @@ export default function RequestsPage() {
                   <Avatar name={request.fullName} size="sm" />
                   <span className="min-w-0">
                     <span className="block max-w-sm truncate font-semibold text-fg hover:underline">{request.title}</span>
-                    <span className="block truncate text-xs text-muted">{request.location}</span>
+                    <span className="block max-w-md truncate text-xs text-muted">{requestSummary(request)}</span>
                   </span>
                 </Link>
               </td>

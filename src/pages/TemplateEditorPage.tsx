@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowRotateLeft, FaFileWord, FaPaperPlane, FaPrint } from "react-icons/fa6";
 import { documentTemplates, type DocumentTemplate } from "@/data/templates";
-import { listings } from "@/lib/mockApi";
+import { listings } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { TemplatePreview } from "@/components/TemplatePreview";
 import { SendForSignatureDialog, type SentRecord } from "@/components/SendForSignatureDialog";

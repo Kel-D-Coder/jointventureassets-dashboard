@@ -24,6 +24,8 @@ export interface InboxEnquiry {
   message: string;
   /** Joint-venture listings only: the developer's answers about moving forward. */
   jv?: JvEnquiryTerms;
+  /** Sale listings only: they agreed to pay the facilitation fee on top of the agreed price. */
+  sale?: { acceptedFeeTerms: true; feeRate: number; askingPrice: number };
   status: EnquiryStatus;
   createdAt: string;
 }
@@ -67,6 +69,8 @@ export interface SubmittedListing {
   images: string[];
   jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
   ownerName: string;
+  /** Sale listings: the seller agreed to pay JVA's facilitation fee out of the sale price. */
+  saleTerms?: { acceptedFeeTerms: true; feeRate: number };
 }
 
 /** A visitor asking for their property to be listed. Reviewed in the dashboard's "Listing requests". */

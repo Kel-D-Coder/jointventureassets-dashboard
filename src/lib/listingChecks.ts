@@ -1,4 +1,4 @@
-import type { ListingInput } from "@/lib/mockApi";
+import type { ListingInput } from "@/lib/api";
 
 /** The company, used as a listing's owner unless another owner is entered. */
 export const COMPANY_OWNER = "Joint Venture Assets";

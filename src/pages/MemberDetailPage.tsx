@@ -1,7 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { FaBan, FaCheck, FaEnvelope, FaPaperPlane, FaPhone, FaRotateLeft } from "react-icons/fa6";
-import { accounts, sendProfileReminder } from "@/lib/inboxApi";
+import { accounts, sendProfileReminder } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { forgetMembers } from "@/hooks/useMembers";
 import { Avatar } from "@/components/Avatar";
@@ -65,12 +65,15 @@ function MemberDetail({
   const answers = fullProfile(member.role, member.category, member.profile);
   const missingRequired = answers.filter((answer) => answer.required && !answer.value).length;
   const isInvestor = member.role === "Investor";
+  const isBuyer = member.role === "Buyer";
   const documentSlots: Array<{ label: string; required: boolean; doc?: SubmittedDocument }> = isInvestor
     ? [
         { label: "Company profile", required: true, doc: member.documents?.companyProfile },
         { label: "Proof of funds", required: false, doc: member.documents?.proofOfFunds },
       ]
-    : [];
+    : isBuyer
+      ? [{ label: "Proof of funds", required: false, doc: member.documents?.proofOfFunds }]
+      : [];
   const uploaded = documentSlots.filter((slot): slot is { label: string; required: boolean; doc: SubmittedDocument } => Boolean(slot.doc));
   const missingCompanyProfile = isInvestor && !member.documents?.companyProfile;
   const canRemind = member.status === "pending" && (!member.profileCompleted || missingCompanyProfile);
@@ -176,9 +179,11 @@ function MemberDetail({
 
       <MemberActivity member={member} />
 
-      {isInvestor ? (
+      {isInvestor || isBuyer ? (
         <Card>
-          <CardTitle hint="Company profile is required for investors; proof of funds is optional.">Documents</CardTitle>
+          <CardTitle hint={isInvestor ? "Company profile is required for investors; proof of funds is optional." : "Proof of funds is optional for buyers."}>
+            Documents
+          </CardTitle>
           {uploaded.length ? <DocumentList documents={uploaded.map((slot) => slot.doc)} labels={uploaded.map((slot) => slot.label)} /> : null}
           {documentSlots
             .filter((slot) => !slot.doc)

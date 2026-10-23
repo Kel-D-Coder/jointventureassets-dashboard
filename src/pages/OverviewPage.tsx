@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { FaBuilding, FaFileSignature, FaInbox, FaUsers } from "react-icons/fa6";
-import { listings, messages, requests } from "@/lib/mockApi";
-import { accounts, inboxEnquiries, listingSubmissions } from "@/lib/inboxApi";
+import { listings, messages, requests } from "@/lib/api";
+import { accounts, inboxEnquiries, listingSubmissions } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { Avatar } from "@/components/Avatar";
 import { PersonLink } from "@/components/PersonLink";

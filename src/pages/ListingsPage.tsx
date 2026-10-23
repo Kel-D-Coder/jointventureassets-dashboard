@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FaEye, FaLocationDot, FaMessage, FaPlus, FaStar } from "react-icons/fa6";
-import { listings } from "@/lib/mockApi";
-import { inboxEnquiries } from "@/lib/inboxApi";
+import { listings } from "@/lib/api";
+import { inboxEnquiries } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { DealTypePill, ListingStatusPill } from "@/components/StatusPills";
 import { listingStatusLabel, propertyTypeLabel } from "@/data/labels";

@@ -1,3 +1,5 @@
+import { stampWatermark } from "@/lib/photoWatermark";
+
 const MAX_EDGE = 1400;
 const QUALITY = 0.78;
 
@@ -20,8 +22,8 @@ export async function readLetterhead(file: File): Promise<string> {
 }
 
 /**
- * Reads an uploaded photo and shrinks it to a JPEG data URL no wider or taller
- * than 1400px, so a listing's photos fit in the browser's demo storage.
+ * Reads an uploaded photo, stamps the JVA watermark on it and shrinks it to a
+ * JPEG data URL no wider or taller than 1400px, so a listing's photos fit in the browser's demo storage.
  * With a real backend this becomes an upload that returns the stored file's URL.
  */
 export async function resizeImage(file: File): Promise<string> {
@@ -36,5 +38,6 @@ export async function resizeImage(file: File): Promise<string> {
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
+  await stampWatermark(canvas);
   return canvas.toDataURL("image/jpeg", QUALITY);
 }

@@ -1,5 +1,5 @@
 import type { PillTone } from "@/ui";
-import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PropertyType, RequestStatus, RequestType } from "@/types";
+import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PropertyType, RequestStatus } from "@/types";
 
 export const dealTypeLabel: Record<DealType, string> = {
   jv: "Joint venture",
@@ -26,12 +26,7 @@ export const requestStatusLabel: Record<RequestStatus, string> = {
   rejected: "Rejected",
 };
 
-export const requestTypeLabel: Record<RequestType, string> = {
-  land: "Land offer",
-  purchase: "Purchase request",
-  development: "Development",
-  partnership: "Partnership",
-};
+export { requestTypeLabel } from "@/lib/requestBrief";
 
 export const titleDocuments = [
   "C of O",

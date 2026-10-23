@@ -20,11 +20,11 @@ export function PersonLink({
   showRole?: boolean;
 }) {
   const member = useMemberLookup()({ email, userId });
-  const role = showRole ? <span className="font-normal text-muted"> · {member ? `${member.role} member` : "Not a registered member"}</span> : null;
+  const role = showRole && member ? <span className="font-normal text-muted"> · {member.role} member</span> : null;
 
   if (!member) {
     return (
-      <span className={className} title="Not a registered member">
+      <span className={className}>
         {name}
         {role}
       </span>

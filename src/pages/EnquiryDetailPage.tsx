@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FaArrowUpRightFromSquare, FaBuilding, FaCircleCheck, FaEnvelope, FaFileContract, FaFileSignature, FaPhone, FaTrashCan } from "react-icons/fa6";
-import { inboxEnquiries } from "@/lib/inboxApi";
-import { listings, requests } from "@/lib/mockApi";
+import { inboxEnquiries } from "@/lib/api";
+import { listings, requests } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { Avatar } from "@/components/Avatar";
 import { ContactCard } from "@/components/ContactCard";

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { accounts } from "@/lib/inboxApi";
+import { accounts } from "@/lib/api";
 import type { MemberAccount } from "@/types";
 
 // Every name on a page looks members up; they share one recent copy of the list.

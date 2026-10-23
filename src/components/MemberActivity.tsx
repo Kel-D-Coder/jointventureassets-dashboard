@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FaArrowRight } from "react-icons/fa6";
-import { listings, requests } from "@/lib/mockApi";
-import { inboxEnquiries, listingSubmissions } from "@/lib/inboxApi";
+import { listings, requests } from "@/lib/api";
+import { inboxEnquiries, listingSubmissions } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { formatDate, formatNairaShort } from "@/lib/format";
 import { Card, CardTitle, Pill } from "@/ui";

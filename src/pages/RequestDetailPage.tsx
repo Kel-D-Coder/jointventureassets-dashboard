@@ -1,14 +1,25 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
-import { FaArrowLeft, FaCheck, FaPlus, FaXmark } from "react-icons/fa6";
-import { requests } from "@/lib/mockApi";
-import { inboxEnquiries } from "@/lib/inboxApi";
+import { FaArrowLeft, FaCheck, FaMagnifyingGlass, FaXmark } from "react-icons/fa6";
+import { requests } from "@/lib/api";
+import { inboxEnquiries } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { ContactCard } from "@/components/ContactCard";
 import { PersonLink } from "@/components/PersonLink";
 import { RequestStatusPill } from "@/components/StatusPills";
 import { requestTypeLabel } from "@/data/labels";
-import { formatDateTime, formatNaira, negotiableText, premiumText } from "@/lib/format";
+import {
+  developmentTypes,
+  housingProposals,
+  jvPropertyKinds,
+  labelOf,
+  partnershipTypes,
+  propertiesWanted,
+  requestSummary,
+  sharingFormulas,
+  titleDocuments,
+} from "@/lib/requestBrief";
+import { formatDateTime, formatNaira } from "@/lib/format";
 import { Button, Card, CardTitle, Field, Notice, PageHeader, SkeletonRows, inputClass } from "@/ui";
 import type { PartnerRequest } from "@/types";
 
@@ -20,8 +31,6 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
     </div>
   );
 }
-
-const humanise = (value: string) => value.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
 const loadEnquiries = () => inboxEnquiries.list().catch(() => []);
 
@@ -76,20 +85,25 @@ export default function RequestDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
           <Card>
-            <CardTitle>Details</CardTitle>
-            <p className="text-sm leading-relaxed whitespace-pre-line text-fg">{request.description}</p>
+            <CardTitle hint="What this member wants us to find.">The brief</CardTitle>
+            <p className="rounded-lg border border-gold/30 bg-gold-soft/40 p-4 text-[0.9375rem] font-medium text-fg">{requestSummary(request)}</p>
+            {otherNotes(request) ? <p className="mt-4 text-sm leading-relaxed whitespace-pre-line text-fg">{otherNotes(request)}</p> : null}
             <dl className="mt-6 grid gap-5 border-t border-fg/8 pt-6 sm:grid-cols-3">
-              <Detail label={request.requestType === "purchase" ? "Budget" : "Budget / value"}>{formatNaira(request.budget)}</Detail>
-              <Detail label="Location">{request.location}</Detail>
-              <Detail label="Timeline">{request.timeline}</Detail>
-              {request.landSize ? <Detail label="Land size">{request.landSize}</Detail> : null}
-              {request.titleDocument ? <Detail label="Title document">{request.titleDocument}</Detail> : null}
-              {request.sharingFormula ? <Detail label="Sharing formula">{request.sharingFormula}</Detail> : null}
-              {request.sharingFormula ? <Detail label="Sharing negotiable">{negotiableText(request.sharingNegotiable)}</Detail> : null}
-              {request.sharingFormula ? <Detail label="Premium">{premiumText(request.premium)}</Detail> : null}
-              {request.developmentType ? <Detail label="Development type">{humanise(request.developmentType)}</Detail> : null}
-              {request.partnershipType ? <Detail label="Partnership type">{humanise(request.partnershipType)}</Detail> : null}
-              {request.propertyWanted ? <Detail label="Looking to buy">{request.propertyWanted}</Detail> : null}
+              <Detail label="Budget">{request.budget ? `Up to ${formatNaira(request.budget)}` : "Not given"}</Detail>
+              <Detail label="Location">{request.location || "Not given"}</Detail>
+              <Detail label="Needed by">{request.timeline || "Not given"}</Detail>
+              {request.propertyWanted ? (
+                <Detail label="Looking for">{labelOf(request.requestType === "jv" ? jvPropertyKinds : propertiesWanted, request.propertyWanted)}</Detail>
+              ) : null}
+              {request.developmentType ? <Detail label="Development">{labelOf(developmentTypes, request.developmentType)}</Detail> : null}
+              {request.partnershipType ? <Detail label="Professional">{labelOf(partnershipTypes, request.partnershipType)}</Detail> : null}
+              {request.landSize ? <Detail label="Size wanted">{request.landSize}</Detail> : null}
+              {request.housingProposal ? <Detail label="Plans to build">{labelOf(housingProposals, request.housingProposal)}</Detail> : null}
+              {request.sharingFormula ? <Detail label="Sharing formula">{labelOf(sharingFormulas, request.sharingFormula)}</Detail> : null}
+              {request.premium !== undefined ? (
+                <Detail label="Premium">{request.premium > 0 ? `Up to ${formatNaira(request.premium)}` : "No premium"}</Detail>
+              ) : null}
+              {request.titleDocument ? <Detail label="Title accepted">{labelOf(titleDocuments, request.titleDocument)}</Detail> : null}
               {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod}</Detail> : null}
               <Detail label="Last updated">{formatDateTime(request.updatedAt)}</Detail>
             </dl>
@@ -155,13 +169,12 @@ function ReviewPanel({
         <CardTitle>Decision</CardTitle>
         <RequestStatusPill status={request.status} />
         <p className="mt-3 text-sm text-muted">{request.reviewNote ?? "No note was left."}</p>
-        {request.status === "accepted" && request.requestType === "land" ? (
+        {request.status === "accepted" ? (
           <Link
-            to="/listings/new"
-            state={{ fromRequest: request }}
+            to="/listings"
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2.5 text-sm font-semibold text-ink hover:bg-gold/85"
           >
-            <FaPlus aria-hidden="true" /> Create a listing from this
+            <FaMagnifyingGlass aria-hidden="true" /> Find a match in listings
           </Link>
         ) : null}
       </Card>
@@ -184,4 +197,11 @@ function ReviewPanel({
       </div>
     </Card>
   );
+}
+
+/** The description without the summary sentence it starts with, which is shown above it. */
+function otherNotes(request: PartnerRequest): string {
+  const summary = requestSummary(request);
+  const description = request.description ?? "";
+  return description.startsWith(summary) ? description.slice(summary.length).trim() : description;
 }

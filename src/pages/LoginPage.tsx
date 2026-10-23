@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa6";
 import { useLogin, useSession } from "@/hooks/useAuth";
-import { DEMO_ADMIN } from "@/lib/mockApi";
+import { DEMO_ADMIN } from "@/lib/api";
 import { websiteUrl } from "@/data/site";
 import { Field, inputClass } from "@/ui";
 
@@ -14,6 +15,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   if (session) return <Navigate to={from} replace />;
@@ -69,14 +71,25 @@ export default function LoginPage() {
               />
             </Field>
             <Field label="Password">
-              <input
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className={inputClass}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className={`${inputClass} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((shown) => !shown)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-lg text-muted hover:text-fg focus-visible:text-fg focus-visible:outline-none"
+                >
+                  {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                </button>
+              </div>
             </Field>
 
             {error ? (
@@ -94,8 +107,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 rounded-xl border border-gold/30 bg-gold-soft/50 p-4 text-sm">
-            <p className="font-semibold text-fg">Testing with demo data</p>
+          <p className="mt-6 rounded-xl border border-fg/10 bg-raised p-4 text-sm text-muted">
+            Sign in with your JVA admin account. The first sign-in can take up to a minute while the server wakes up.
+          </p>
+
+          <div className="mt-4 rounded-xl border border-gold/30 bg-gold-soft/50 p-4 text-sm">
+            <p className="font-semibold text-fg">Testing with the demo login</p>
             <p className="mt-1 text-muted">
               {DEMO_ADMIN.email} / {DEMO_ADMIN.password}
             </p>

@@ -67,8 +67,12 @@ export interface DealClosing {
 }
 
 export type RequestStatus = "pending" | "accepted" | "rejected";
-/** "land": offering land or property. "purchase": wanting to buy it. */
-export type RequestType = "land" | "purchase" | "development" | "partnership";
+/**
+ * What a member wants JVA to find: a joint venture, land to buy, a property to
+ * buy, a development project, or a professional partner. (Older "land" requests
+ * from before 2026-10-18 were offers of land.)
+ */
+export type RequestType = "jv" | "land" | "purchase" | "development" | "partnership";
 
 export interface PartnerRequest {
   id: string;
@@ -93,6 +97,8 @@ export interface PartnerRequest {
   sharingNegotiable?: boolean;
   /** Land offers: upfront premium expected from the developer, in naira; 0 means none. */
   premium?: number;
+  /** Joint ventures: what they plan to build. */
+  housingProposal?: string;
   /** Purchase requests: what they want to buy and how they'll pay. */
   propertyWanted?: string;
   paymentMethod?: string;
@@ -117,6 +123,8 @@ export interface ContactMessage {
 export interface AdminSession {
   name: string;
   email: string;
+  /** Bearer token from POST /auth/login. */
+  token: string;
   /** Epoch milliseconds. */
   expiresAt: number;
 }

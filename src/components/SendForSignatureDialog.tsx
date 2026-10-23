@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaPaperPlane, FaXmark } from "react-icons/fa6";
-import { accounts, sendDocumentForSignature } from "@/lib/inboxApi";
+import { accounts, sendDocumentForSignature } from "@/lib/api";
 import { Avatar } from "@/components/Avatar";
 import { cx } from "@/lib/format";
 import { Button, Field, Notice, inputClass } from "@/ui";

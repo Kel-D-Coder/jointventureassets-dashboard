@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaCalendarCheck, FaClock, FaHandshake, FaMoneyBillWave } from "react-icons/fa6";
-import { listings } from "@/lib/mockApi";
+import { listings } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";

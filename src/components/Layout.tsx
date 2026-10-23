@@ -16,8 +16,8 @@ import {
 } from "react-icons/fa6";
 import { logout, useSession } from "@/hooks/useAuth";
 import { useNavCounts } from "@/hooks/useNavCounts";
-import { resetDemoData } from "@/lib/mockApi";
-import { resetInbox } from "@/lib/inboxApi";
+import { isDemoSession } from "@/lib/api";
+import { resetDemoData } from "@/lib/demoApi";
 import { cx, initials } from "@/lib/format";
 import { websiteUrl } from "@/data/site";
 
@@ -70,11 +70,9 @@ export function Layout() {
     navigate("/login", { replace: true });
   };
 
-  const resetData = async () => {
-    if (!window.confirm("Put every request, listing, user, message, enquiry and listing request back to the demo data?")) return;
+  const resetData = () => {
+    if (!window.confirm("Put every demo enquiry and message back the way it started?")) return;
     resetDemoData();
-    // Enquiries and listing requests live in the website's demo inbox.
-    await resetInbox().catch(() => undefined);
     window.location.reload();
   };
 
@@ -166,16 +164,20 @@ export function Layout() {
             ) : null}
           </p>
           <div className="flex items-center gap-2">
-            <span className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-gold-soft/70 px-2.5 py-1 text-[0.6875rem] font-semibold text-gold-deep">
-              <span className="h-1.5 w-1.5 rounded-full bg-gold" /> Demo data
-            </span>
-            <button
-              type="button"
-              onClick={resetData}
-              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium text-muted hover:bg-fg/[0.05] hover:text-fg"
-            >
-              <FaArrowRotateLeft aria-hidden="true" /> Reset demo
-            </button>
+            {isDemoSession() ? (
+              <>
+                <span className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-gold-soft/70 px-2.5 py-1 text-[0.6875rem] font-semibold text-gold-deep">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gold" /> Demo data
+                </span>
+                <button
+                  type="button"
+                  onClick={resetData}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium text-muted hover:bg-fg/[0.05] hover:text-fg"
+                >
+                  <FaArrowRotateLeft aria-hidden="true" /> Reset demo
+                </button>
+              </>
+            ) : null}
             <a
               href={websiteUrl()}
               target="_blank"

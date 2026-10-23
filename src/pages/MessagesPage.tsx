@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { messages } from "@/lib/mockApi";
+import { messages, isDemoSession, notOnServer } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { cx, formatDateTime, timeAgo } from "@/lib/format";
@@ -13,6 +13,7 @@ export default function MessagesPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Inbox" title="Messages" intro={`Sent through the website's contact form. ${unread} unread.`} />
 
+      {isDemoSession() ? null : <Notice tone="info">{notOnServer.messages}</Notice>}
       {error ? <Notice tone="error">{error}</Notice> : null}
 
       {loading ? (

@@ -215,13 +215,17 @@ export function Tabs<T extends string>({
 }
 
 /** A short-lived status line under a form or toolbar. */
-export function Notice({ tone, children }: { tone: "success" | "error"; children: ReactNode }) {
+export function Notice({ tone, children }: { tone: "success" | "error" | "info"; children: ReactNode }) {
   return (
     <p
       role={tone === "error" ? "alert" : "status"}
       className={cx(
         "rounded-lg border px-4 py-3 text-sm font-medium",
-        tone === "success" ? "border-success/20 bg-success/8 text-success" : "border-danger/20 bg-danger/8 text-danger",
+        tone === "success"
+          ? "border-success/20 bg-success/8 text-success"
+          : tone === "info"
+            ? "border-info/20 bg-info/[0.06] text-info"
+            : "border-danger/20 bg-danger/8 text-danger",
       )}
     >
       {children}
@@ -254,12 +258,15 @@ export function Table({ head, children, minWidth = "min-w-3xl" }: { head: ReactN
   );
 }
 
-/** A naira amount: shows commas as you type (1,000,000) and hands back digits only. */
-export function MoneyInput({ value, onChange }: { value: string; onChange: (digits: string) => void }) {
+/** A whole number (an amount, a size): shows commas as you type (1,000,000) and hands back digits only. */
+export function NumberInput({ value, onChange }: { value: string; onChange: (digits: string) => void }) {
   return (
     <input inputMode="numeric" value={withCommas(value)} onChange={(event) => onChange(event.target.value.replace(/[^\d]/g, ""))} className={inputClass} />
   );
 }
+
+/** A naira amount. */
+export const MoneyInput = NumberInput;
 
 export type YesNoValue = "" | "yes" | "no";
 

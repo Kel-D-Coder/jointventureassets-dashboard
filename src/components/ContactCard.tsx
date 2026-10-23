@@ -63,6 +63,7 @@ export function ContactCard({
 
 function PersonRole({ email, userId, note }: { email?: string; userId?: string; note?: string }) {
   const member = useMemberLookup()({ email, userId });
-  const role = member ? `${member.role} member` : "Not a registered member";
-  return <p className="text-xs text-muted">{note ? `${note} · ${role}` : role}</p>;
+  const role = member ? `${member.role} member` : "";
+  const line = [note, role].filter(Boolean).join(" · ");
+  return line ? <p className="text-xs text-muted">{line}</p> : null;
 }

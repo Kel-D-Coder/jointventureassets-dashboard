@@ -4,7 +4,7 @@ import { FaCheck, FaFileContract, FaTrashCan, FaXmark } from "react-icons/fa6";
 import { DocumentList } from "@/components/DocumentList";
 import { ContactCard } from "@/components/ContactCard";
 import { PersonLink } from "@/components/PersonLink";
-import { listingSubmissions } from "@/lib/inboxApi";
+import { listingSubmissions } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { DealTypePill } from "@/components/StatusPills";
 import { propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone } from "@/data/labels";
@@ -57,6 +57,7 @@ export default function ListingRequestDetailPage() {
       <SubmissionDetail
         submission={submission}
         busy={review.pending || remove.pending}
+        onApprove={() => act(() => review.run(submission.id, { status: "approved", reviewNote: "Approved and published." }), "Approved. It's now live on the website.")}
         onReject={(note) => act(() => review.run(submission.id, { status: "rejected", reviewNote: note }), "Rejected. The owner will see your note.")}
         onReopen={() => act(() => review.run(submission.id, { status: "pending", reviewNote: "" }), "Moved back to pending.")}
         onDelete={async () => {
@@ -85,12 +86,14 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 function SubmissionDetail({
   submission,
   busy,
+  onApprove,
   onReject,
   onReopen,
   onDelete,
 }: {
   submission: ListingSubmission;
   busy: boolean;
+  onApprove: () => void;
   onReject: (note: string) => void;
   onReopen: () => void;
   onDelete: () => void;
@@ -146,6 +149,15 @@ function SubmissionDetail({
                 <Fact label="Proposal">{listing.jv.proposal || "No"}</Fact>
               </div>
             </>
+          ) : null}
+          {listing.dealType === "sale" ? (
+            <div className="sm:col-span-2">
+              <Fact label="Seller's facilitation fee">
+                {listing.saleTerms?.acceptedFeeTerms
+                  ? `Agreed: ${listing.saleTerms.feeRate * 100}% of the sale price (${formatNaira(Math.round(listing.price * listing.saleTerms.feeRate))} on the asking price)`
+                  : "Not agreed (submitted before the fee terms were added)"}
+              </Fact>
+            </div>
           ) : null}
         </dl>
 
@@ -218,10 +230,10 @@ function SubmissionDetail({
               </div>
             ) : (
               <div className="grid gap-2">
-                <Button tone="gold" size="md" disabled={busy} onClick={() => navigate("/listings/new", { state: { fromSubmission: submission } })}>
-                  <FaCheck aria-hidden="true" /> Review &amp; publish
+                <Button tone="gold" size="md" disabled={busy} onClick={onApprove}>
+                  <FaCheck aria-hidden="true" /> Approve &amp; publish
                 </Button>
-                <p className="text-xs text-muted">Opens the listing editor with these details filled in. It&apos;s marked approved when you publish.</p>
+                <p className="text-xs text-muted">Puts it live on the website. You can edit it afterwards from Listings.</p>
                 <Button size="md" tone="danger" disabled={busy} onClick={() => setRejecting(true)}>
                   <FaXmark aria-hidden="true" /> Reject
                 </Button>

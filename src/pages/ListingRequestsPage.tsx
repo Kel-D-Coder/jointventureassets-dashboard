@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FaPaperclip } from "react-icons/fa6";
-import { listingSubmissions } from "@/lib/inboxApi";
+import { listingSubmissions } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";

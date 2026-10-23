@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FaPen } from "react-icons/fa6";
-import { listings } from "@/lib/mockApi";
+import { listings } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { ContactCard } from "@/components/ContactCard";
 import { DocumentList } from "@/components/DocumentList";

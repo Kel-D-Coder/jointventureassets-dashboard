@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { listings } from "@/lib/mockApi";
-import { accounts, inboxEnquiries, listingSubmissions } from "@/lib/inboxApi";
+import { listings } from "@/lib/api";
+import { accounts, inboxEnquiries, listingSubmissions } from "@/lib/api";
 
 /** Sidebar badges: how many items in each section need attention. Keyed by the link's path. */
 export type NavCounts = Partial<Record<string, number>>;

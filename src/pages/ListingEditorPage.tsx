@@ -1,8 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowUpRightFromSquare, FaFloppyDisk, FaTrashCan } from "react-icons/fa6";
-import { listings, type ListingInput } from "@/lib/mockApi";
-import { listingSubmissions } from "@/lib/inboxApi";
+import { listings, type ListingInput } from "@/lib/api";
 import { useAction } from "@/hooks/useResource";
 import { ImageUploader } from "@/components/ImageUploader";
 import { PersonLink } from "@/components/PersonLink";
@@ -11,7 +10,7 @@ import { closingDraft, closingErrors, toClosing, type ClosingDraft, type Closing
 import { COMPANY_OWNER, missingFor, type CheckedField } from "@/lib/listingChecks";
 import { listingStatusLabel, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/data/labels";
 import { websiteUrl } from "@/data/site";
-import { Button, Card, CardTitle, Field, MoneyInput, Notice, PageHeader, SkeletonRows, Tabs, YesNo, inputClass, type YesNoValue } from "@/ui";
+import { Button, Card, CardTitle, Field, MoneyInput, Notice, NumberInput, PageHeader, SkeletonRows, Tabs, YesNo, inputClass, type YesNoValue } from "@/ui";
 import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType } from "@/types";
 
 /** Form values — numbers stay as strings while they're being typed. */
@@ -233,6 +232,19 @@ export default function ListingEditorPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [closingProblems, setClosingProblems] = useState<ClosingErrors>({});
 
+  // Leaving a new listing or a draft with unsaved changes saves it to Drafts (see the effect below).
+  /** The form as it was last loaded or saved; anything different is unsaved. */
+  const savedRef = useRef<Draft>(draft);
+  const latestRef = useRef<Draft>(draft);
+  /** Set while a save or delete is running, or after a delete, so leaving doesn't save a second copy. */
+  const busyRef = useRef(false);
+  const hasUnsavedDraft = () =>
+    !busyRef.current && latestRef.current.status === "draft" && JSON.stringify(latestRef.current) !== JSON.stringify(savedRef.current);
+
+  useEffect(() => {
+    latestRef.current = draft;
+  }, [draft]);
+
   const save = useAction(
     (input: ListingInput) => (listingId ? listings.update(listingId, input) : listings.create(input)),
     "Couldn't save the listing.",
@@ -244,7 +256,10 @@ export default function ListingEditorPage() {
     listings
       .get(listingId)
       .then((listing) => {
-        setDraft(closeRequested && listing.status !== "draft" ? { ...draftFromListing(listing), status: "closed" } : draftFromListing(listing));
+        const loaded = draftFromListing(listing);
+        savedRef.current = loaded;
+        latestRef.current = loaded;
+        setDraft(closeRequested && listing.status !== "draft" ? { ...loaded, status: "closed" } : loaded);
         if (closeRequested && listing.status !== "closed") {
           setNotice({ tone: "success", text: "Marked as closed. Fill in the closing details below, then save." });
         }
@@ -253,30 +268,42 @@ export default function ListingEditorPage() {
       .finally(() => setLoading(false));
   }, [listingId, closeRequested]);
 
+  useEffect(() => {
+    // Closing or reloading the tab can't wait for a save, so the browser asks first.
+    const warn = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedDraft()) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      // Moving to another page in the dashboard: save to Drafts in the background.
+      if (!hasUnsavedDraft()) return;
+      const input = toInput(latestRef.current, "draft");
+      (listingId ? listings.update(listingId, input) : listings.create(input)).catch((caught: Error) =>
+        console.error("Couldn't save the draft when leaving the page:", caught.message),
+      );
+    };
+    // Runs once per listing; the refs carry the latest form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listingId]);
+
   const isDraft = draft.status === "draft";
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => ({ ...current, [key]: value }));
 
   const persist = async (status: ListingStatus, successText: string) => {
+    busyRef.current = true;
     try {
       const saved = await save.run(toInput(draft, status));
+      // Both refs now match, so the page change that follows a save doesn't save it again.
+      savedRef.current = { ...draft, status };
+      latestRef.current = savedRef.current;
       setDraft((current) => ({ ...current, status }));
-      let text = successText;
-      // A listing made from a website submission: publishing approves the submission; a draft just links it.
-      if (draft.sourceSubmissionId) {
-        try {
-          await listingSubmissions.review(
-            draft.sourceSubmissionId,
-            status === "draft" ? { listingId: saved.id } : { status: "approved", listingId: saved.id, reviewNote: "Approved and published." },
-          );
-          if (status !== "draft") text += " The listing request is marked approved.";
-        } catch {
-          text += " (Couldn't update the listing request on the website. Mark it there later.)";
-        }
-      }
-      setNotice({ tone: "success", text });
+      setNotice({ tone: "success", text: successText });
       if (isNew || closeRequested) navigate(`/listings/${saved.id}`, { replace: true });
     } catch (caught) {
       setNotice({ tone: "error", text: (caught as Error).message });
+    } finally {
+      busyRef.current = false;
     }
   };
 
@@ -317,10 +344,13 @@ export default function ListingEditorPage() {
 
   const handleDelete = async () => {
     if (!listingId) return;
+    busyRef.current = true;
     try {
       await remove.run(listingId);
+      // Stays set: the listing is gone, so leaving must not save it again.
       navigate(isDraft ? "/drafts" : "/listings", { replace: true });
     } catch (caught) {
+      busyRef.current = false;
       setNotice({ tone: "error", text: (caught as Error).message });
     }
   };
@@ -345,7 +375,7 @@ export default function ListingEditorPage() {
             : fromRequest
             ? `Pre-filled from ${fromRequest.fullName}'s request. Check everything before publishing.`
             : isNew
-              ? "Not got everything yet? Save it as a draft and finish it later."
+              ? "Not got everything yet? Save it as a draft, or just leave: your changes are saved to Drafts."
               : undefined
         }
         action={
@@ -407,7 +437,7 @@ export default function ListingEditorPage() {
                 </select>
               </Field>
               <Field label="Size (sqm)" error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
-                <input inputMode="numeric" value={draft.sizeSqm} onChange={(e) => set("sizeSqm", e.target.value.replace(/[^\d]/g, ""))} className={inputClass} />
+                <NumberInput value={draft.sizeSqm} onChange={(digits) => set("sizeSqm", digits)} />
               </Field>
               <Field label={draft.dealType === "jv" ? "Land value (₦)" : "Asking price (₦)"} error={errors.price}>
                 <MoneyInput value={draft.price} onChange={(digits) => set("price", digits)} />

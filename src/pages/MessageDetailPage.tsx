@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaEnvelope, FaPhone, FaTrashCan } from "react-icons/fa6";
-import { messages } from "@/lib/mockApi";
+import { messages } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { ContactCard } from "@/components/ContactCard";
 import { PersonLink } from "@/components/PersonLink";

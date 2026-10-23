@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FaBuilding, FaFileSignature } from "react-icons/fa6";
-import { inboxEnquiries } from "@/lib/inboxApi";
-import { listings } from "@/lib/mockApi";
+import { inboxEnquiries, isDemoSession, notOnServer } from "@/lib/api";
+import { listings } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
@@ -149,6 +149,7 @@ export default function EnquiriesPage() {
         />
       ) : null}
 
+      {isDemoSession() ? null : <Notice tone="info">{notOnServer.enquiries}</Notice>}
       {inbox.error ? <Notice tone="error">{inbox.error}</Notice> : null}
 
       {inbox.loading ? (

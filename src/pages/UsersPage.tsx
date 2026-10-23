@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { accounts } from "@/lib/inboxApi";
+import { accounts } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { Avatar } from "@/components/Avatar";
 import { accountStatusLabel, accountStatusTone } from "@/data/labels";
