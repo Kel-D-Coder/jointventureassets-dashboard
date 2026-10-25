@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FaEnvelope, FaPhone, FaTrashCan } from "react-icons/fa6";
+import { FaEnvelope, FaPhone } from "react-icons/fa6";
 import { messages } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { ContactCard } from "@/components/ContactCard";
 import { PersonLink } from "@/components/PersonLink";
 import { formatDateTime } from "@/lib/format";
-import { BackLink, Button, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
+import { BackLink, Button, Card, CardTitle, DeleteButton, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 
 export default function MessageDetailPage() {
   const { messageId = "" } = useParams();
@@ -34,7 +34,6 @@ export default function MessageDetailPage() {
   };
 
   const destroy = async () => {
-    if (!window.confirm(`Delete the message from ${message.fullName}?`)) return;
     try {
       await remove.run(message.id);
       navigate("/messages", { replace: true });
@@ -86,9 +85,7 @@ export default function MessageDetailPage() {
               <Button size="md" onClick={toggleRead} disabled={setRead.pending}>
                 Mark as {message.read ? "unread" : "read"}
               </Button>
-              <Button size="md" tone="danger" onClick={destroy} disabled={remove.pending}>
-                <FaTrashCan aria-hidden="true" /> Delete message
-              </Button>
+              <DeleteButton size="md" label="Delete message" onConfirm={destroy} pending={remove.pending} />
             </div>
           </Card>
         </div>

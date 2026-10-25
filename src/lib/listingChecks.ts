@@ -1,5 +1,6 @@
 import type { ListingInput } from "@/lib/api";
 import { isVideoUrl } from "@/lib/videoWatermark";
+import { splitTitles } from "@/data/labels";
 
 /** The company, used as a listing's owner unless another owner is entered. */
 export const COMPANY_OWNER = "Joint Venture Assets";
@@ -13,6 +14,7 @@ export type CheckedField =
   | "description"
   | "ownerName"
   | "images"
+  | "titleDocument"
   | "proposal"
   | "sharingNegotiable"
   | "premium"
@@ -34,6 +36,7 @@ export interface Check {
 const checks: Check[] = [
   { field: "title", label: "Title", message: "Give the listing a title.", passes: (l) => Boolean(l.title.trim()) },
   { field: "images", label: "Photos", message: "Upload at least one photo.", passes: (l) => l.images.some((url) => !isVideoUrl(url)) },
+  { field: "titleDocument", label: "Title documents", message: "Pick at least one title document.", passes: (l) => splitTitles(l.titleDocument).length > 0 },
   { field: "sizeSqm", label: "Size", message: "Enter the size in square metres.", passes: (l) => l.sizeSqm > 0 },
   { field: "price", label: "Price", message: "Enter an amount in naira.", passes: (l) => l.price > 0 },
   { field: "area", label: "Area", message: "Add the area.", passes: (l) => Boolean(l.area.trim()) },

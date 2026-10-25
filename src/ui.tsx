@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaArrowLeft } from "react-icons/fa6";
+import { FaArrowLeft, FaTrashCan } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import { cx, withCommas } from "@/lib/format";
 
@@ -337,5 +337,53 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
     <Link to={to} className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-fg">
       <FaArrowLeft aria-hidden="true" /> {children}
     </Link>
+  );
+}
+
+/**
+ * Deletes in two steps, like a listing: the button turns into "Confirm delete" and "Cancel" in
+ * place, instead of the browser's confirm box. `onConfirm` does the deleting.
+ */
+export function DeleteButton({
+  label,
+  onConfirm,
+  pending = false,
+  disabled = false,
+  size = "sm",
+}: {
+  label: string;
+  onConfirm: () => void | Promise<void>;
+  pending?: boolean;
+  disabled?: boolean;
+  size?: "sm" | "md";
+}) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) {
+    return (
+      <Button tone="danger" size={size} disabled={disabled || pending} onClick={() => setAsking(true)}>
+        <FaTrashCan aria-hidden="true" /> {label}
+      </Button>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        tone="danger"
+        size={size}
+        disabled={pending}
+        onClick={async () => {
+          try {
+            await onConfirm();
+          } finally {
+            setAsking(false);
+          }
+        }}
+      >
+        {pending ? "Deleting…" : "Confirm delete"}
+      </Button>
+      <Button size={size} disabled={pending} onClick={() => setAsking(false)}>
+        Cancel
+      </Button>
+    </div>
   );
 }

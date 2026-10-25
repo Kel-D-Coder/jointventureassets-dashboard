@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaMagnifyingGlass, FaXmark } from "react-icons/fa6";
 import { requests } from "@/lib/api";
 import { inboxEnquiries } from "@/lib/api";
@@ -20,7 +20,7 @@ import {
   titleDocuments,
 } from "@/lib/requestBrief";
 import { formatDateTime, formatNaira } from "@/lib/format";
-import { Button, Card, CardTitle, Field, Notice, PageHeader, SkeletonRows, inputClass } from "@/ui";
+import { Button, Card, CardTitle, DeleteButton, Field, Notice, PageHeader, SkeletonRows, inputClass } from "@/ui";
 import type { PartnerRequest } from "@/types";
 
 function Detail({ label, children }: { label: string; children: ReactNode }) {
@@ -39,6 +39,8 @@ export default function RequestDetailPage() {
   const load = useCallback(() => requests.get(requestId), [requestId]);
   const { data: request, loading, error, reload } = useResource(load, "Couldn't load this request.");
   const { run: review, pending } = useAction(requests.review, "Couldn't save the decision. Try again.");
+  const remove = useAction(requests.remove, "Couldn't delete this request.");
+  const navigate = useNavigate();
   const [note, setNote] = useState("");
   const { data: enquiries = [] } = useResource(loadEnquiries, "");
   const enquiryCount = enquiries.filter((e) => e.target.type === "request" && e.target.id === requestId).length;
@@ -144,6 +146,23 @@ export default function RequestDetailPage() {
           </Card>
 
           <ReviewPanel request={request} note={note} setNote={setNote} pending={pending} decide={decide} />
+
+          <Card>
+            <CardTitle hint="Removes it from the server for good, including from Browse requests on the website.">Delete</CardTitle>
+            <DeleteButton
+              size="md"
+              label="Delete request"
+              pending={remove.pending}
+              onConfirm={async () => {
+                try {
+                  await remove.run(request.id);
+                  navigate("/requests", { replace: true });
+                } catch (caught) {
+                  setNotice({ tone: "error", text: (caught as Error).message });
+                }
+              }}
+            />
+          </Card>
         </div>
       </div>
     </div>

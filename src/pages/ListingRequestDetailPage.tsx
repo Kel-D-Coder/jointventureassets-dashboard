@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FaCheck, FaFileContract, FaTrashCan, FaVideo, FaXmark } from "react-icons/fa6";
+import { FaCheck, FaFileContract, FaVideo, FaXmark } from "react-icons/fa6";
 import { DocumentList } from "@/components/DocumentList";
 import { ContactCard } from "@/components/ContactCard";
 import { PersonLink } from "@/components/PersonLink";
@@ -9,7 +9,7 @@ import { useAction, useResource } from "@/hooks/useResource";
 import { DealTypePill } from "@/components/StatusPills";
 import { priceNegotiableLabel, propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone } from "@/data/labels";
 import { cx, formatDateTime, formatNaira, formatSize, negotiableText, premiumText } from "@/lib/format";
-import { BackLink, Button, Card, CardTitle, Field, Notice, PageHeader, Pill, SkeletonRows, inputClass } from "@/ui";
+import { BackLink, Button, Card, CardTitle, DeleteButton, Field, Notice, PageHeader, Pill, SkeletonRows, inputClass } from "@/ui";
 import type { ListingSubmission, SubmittedDocument } from "@/types";
 import { isVideoUrl } from "@/lib/videoWatermark";
 import { joinMedia } from "@/lib/videoWatermark";
@@ -63,7 +63,6 @@ export default function ListingRequestDetailPage() {
         onReject={(note) => act(() => review.run(submission.id, { status: "rejected", reviewNote: note }), "Rejected. The owner will see your note.")}
         onReopen={() => act(() => review.run(submission.id, { status: "pending", reviewNote: "" }), "Moved back to pending.")}
         onDelete={async () => {
-          if (!window.confirm(`Delete "${listing.title}"? This can't be undone.`)) return;
           try {
             await remove.run(submission.id);
             navigate("/listing-requests", { replace: true });
@@ -160,7 +159,7 @@ function SubmissionDetail({
               <Fact label="Premium">{premiumText(listing.jv.premium)}</Fact>
               <Fact label="Build period">{listing.jv.duration || "Not given"}</Fact>
               <div className="sm:col-span-2">
-                <Fact label="Proposal">{listing.jv.proposal || "No"}</Fact>
+                <Fact label="What can be built">{listing.jv.proposal || "Open to proposals"}</Fact>
               </div>
             </>
           ) : null}
@@ -271,9 +270,7 @@ function SubmissionDetail({
             </div>
           )}
           <div className="mt-5 border-t border-fg/8 pt-4">
-            <Button tone="danger" disabled={busy} onClick={onDelete}>
-              <FaTrashCan aria-hidden="true" /> Delete
-            </Button>
+            <DeleteButton label="Delete" onConfirm={onDelete} pending={busy} />
           </div>
         </Card>
       </div>

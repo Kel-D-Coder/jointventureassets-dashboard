@@ -5,8 +5,8 @@
  * listing requests sent from the website, members' requests and members.
  * Sign-in and file uploads use the shared auth and upload endpoints.
  *
- * Contact messages come from /admin/messages. It has no endpoint yet for
- * reading enquiries; that call is in `notOnServer` below and its page says so.
+ * Contact messages come from /admin/messages, and enquiries sent from the
+ * website (POST /enquiries) from /admin/enquiries.
  */
 import { demoEnquiries, demoMessages, demoSend } from "@/lib/demoApi";
 import { readStored, removeStored } from "@/lib/storage";
@@ -172,6 +172,8 @@ type ServerSubmission = ListingSubmission & WithId;
 
 const toSubmission = (submission: ServerSubmission): ListingSubmission => ({
   ...submission,
+  // Listing titles are always shown in capitals.
+  listing: { ...submission.listing, title: (submission.listing?.title ?? "").toUpperCase() },
   id: idOf(submission),
   kind: "listing-submission",
   documents: submission.documents ?? [],
@@ -197,13 +199,9 @@ const serverListingSubmissions = {
     const body = await call<unknown>(`/admin/listing-requests/${path(id)}/status`, { method: "PATCH", body: JSON.stringify(changes) });
     return toSubmission(pickOne<ServerSubmission>(body, "submission", "listingRequest", "request"));
   },
-  /** Only drafts can be deleted on the server; anything else is rejected instead, which takes it off the website. */
+  /** DELETE /listings/submit/{id}: deletes the listing request for good. If the server refuses, its message is shown. */
   remove: async (id: string): Promise<void> => {
-    try {
-      await call(`/listings/submit/${path(id)}`, { method: "DELETE" });
-    } catch {
-      await serverListingSubmissions.review(id, { status: "rejected", reviewNote: "Removed by the JVA team." });
-    }
+    await call(`/listings/submit/${path(id)}`, { method: "DELETE" });
   },
 };
 
@@ -217,7 +215,7 @@ function toListing(listing: ServerListing): Listing {
   return {
     ...listing,
     id: idOf(listing),
-    title: listing.title ?? "",
+    title: (listing.title ?? "").toUpperCase(),
     dealType: listing.dealType ?? "sale",
     propertyType: listing.propertyType ?? "land",
     area: listing.area ?? "",
@@ -229,6 +227,8 @@ function toListing(listing: ServerListing): Listing {
     description: listing.description ?? "",
     highlights: listing.highlights ?? [],
     ...splitMedia(joinMedia(listing.images, listing.videos)),
+    supportedDocuments: listing.supportedDocuments ?? [],
+    userId: listing.userId ?? undefined,
     jv: listing.jv ?? undefined,
     ownerName: listing.ownerName ?? "",
     ownerEmail: listing.ownerEmail ?? undefined,
@@ -243,19 +243,21 @@ function toListing(listing: ServerListing): Listing {
   };
 }
 
-/** Photos, the video and closing documents picked in the editor are uploaded first; the server stores their URLs. */
+/** Photos, the video, title documents and closing documents picked in the editor are uploaded first; the server stores their URLs. */
 async function toListingBody(input: ListingInput): Promise<ListingInput> {
   const media = splitMedia(joinMedia(input.images, input.videos));
   const images = await Promise.all(media.images.map((url, index) => uploadIfNeeded(url, `photo-${index + 1}`)));
   const videos = await Promise.all(media.videos.map((url) => uploadIfNeeded(url, "video")));
   const closing = input.closing ? { ...input.closing, documents: await uploadDocuments(input.closing.documents) } : undefined;
-  return { ...input, images, videos, closing, jv: input.dealType === "jv" ? input.jv : undefined };
+  const supportedDocuments = await uploadDocuments(input.supportedDocuments ?? []);
+  return { ...input, images, videos, supportedDocuments, closing, jv: input.dealType === "jv" ? input.jv : undefined };
 }
 
 /** An approved listing request is live on the website; the dashboard shows it as a published listing with the request's id. */
 function submissionToListing(submission: ServerSubmission): Listing {
   const { listing, contact } = submission;
   return toListing({
+    supportedDocuments: submission.documents ?? [],
     ...listing,
     jv: listing.dealType === "jv" ? listing.jv : undefined,
     ownerName: listing.ownerName || contact?.fullName,
@@ -273,7 +275,7 @@ function submissionToListing(submission: ServerSubmission): Listing {
 const fromRequest = (listing: Listing) => listing.sourceSubmissionId === listing.id;
 
 const notEditable =
-  "This listing came from a listing request, and the server doesn't let the admin edit those yet. You can still delete it, which takes it off the website.";
+  "This listing came from a listing request, and the server doesn't let the admin edit those yet. You can still delete it.";
 
 /**
  * GET /admin/listings sends the admin's own listings under `listings` and the approved
@@ -312,11 +314,11 @@ const serverListings = {
     const body = await call<unknown>(`/admin/listings/${path(id)}`, { method: "PUT", body: JSON.stringify(await toListingBody(input)) });
     return toListing(pickOne<ServerListing>(body, "listing"));
   },
-  /** Deleting an approved listing request rejects it, which takes it off the website. */
+  /** An approved listing request is deleted with DELETE /listings/submit/{id}; the admin's own listings with DELETE /admin/listings/{id}. */
   remove: async (id: string): Promise<void> => {
     const listing = (await allListings()).find((candidate) => candidate.id === id);
     if (listing && fromRequest(listing)) {
-      await serverListingSubmissions.review(id, { status: "rejected", reviewNote: "Removed by the JVA team." });
+      await serverListingSubmissions.remove(id);
       return;
     }
     await call(`/admin/listings/${path(id)}`, { method: "DELETE" });
@@ -348,6 +350,10 @@ const serverRequests = {
       body: JSON.stringify({ status, reviewNote: note.trim() || undefined }),
     });
     return toRequest(pickOne<ServerRequest>(body, "request"));
+  },
+  /** DELETE /admin/requests/{id}: removes a member's request for good. */
+  remove: async (id: string): Promise<void> => {
+    await call(`/admin/requests/${path(id)}`, { method: "DELETE" });
   },
 };
 
@@ -414,20 +420,63 @@ export async function sendProfileReminder(memberId: string): Promise<void> {
   await call(`/admin/users/${path(memberId)}/profile-reminder`, { method: "POST" });
 }
 
-// --- Not on the server yet --------------------------------------------------
+// --- Enquiries (/admin/enquiries) -------------------------------------------
 
-/** What each page says while its endpoint doesn't exist. */
-export const notOnServer = {
-  enquiries: "The server doesn't have an endpoint for enquiries yet, so enquiries sent from the website can't be shown here.",
-} as const;
+/**
+ * The website sends { target, fullName, email, phoneNumber, message, jv?, sale? }
+ * to POST /enquiries. The target may also come back as flat fields.
+ */
+type ServerEnquiry = Partial<Omit<InboxEnquiry, "target" | "status">> &
+  WithId & {
+    target?: Partial<InboxEnquiry["target"]>;
+    targetType?: string;
+    targetId?: string;
+    targetTitle?: string;
+    listingId?: string;
+    listingTitle?: string;
+    requestId?: string;
+    requestTitle?: string;
+    emailAddress?: string;
+    status?: string | null;
+  };
 
-const unavailable = (text: string) => () => Promise.reject(new Error(text));
+const ENQUIRY_STATUSES: ReadonlyArray<EnquiryStatus> = ["new", "contacted", "closed"];
+
+function toEnquiry(enquiry: ServerEnquiry): InboxEnquiry {
+  const target = enquiry.target ?? {};
+  const type = (target.type ?? enquiry.targetType ?? (enquiry.requestId ? "request" : "listing")) === "request" ? "request" : "listing";
+  return {
+    ...enquiry,
+    id: idOf(enquiry),
+    kind: "enquiry",
+    target: {
+      type,
+      id: target.id ?? enquiry.targetId ?? (type === "request" ? enquiry.requestId : enquiry.listingId) ?? "",
+      title: target.title ?? enquiry.targetTitle ?? (type === "request" ? enquiry.requestTitle : enquiry.listingTitle) ?? "Untitled",
+      subtitle: target.subtitle ?? undefined,
+      image: target.image ?? undefined,
+    },
+    fullName: enquiry.fullName ?? "",
+    email: enquiry.email ?? enquiry.emailAddress ?? "",
+    phoneNumber: enquiry.phoneNumber ?? "",
+    message: enquiry.message ?? "",
+    jv: enquiry.jv ?? undefined,
+    sale: enquiry.sale ?? undefined,
+    status: ENQUIRY_STATUSES.find((known) => known === enquiry.status) ?? "new",
+    createdAt: enquiry.createdAt ?? new Date().toISOString(),
+  };
+}
 
 const serverInboxEnquiries = {
-  list: async (): Promise<InboxEnquiry[]> => [],
-  get: unavailable(notOnServer.enquiries) as (id: string) => Promise<InboxEnquiry>,
-  setStatus: unavailable(notOnServer.enquiries) as (id: string, status: EnquiryStatus) => Promise<InboxEnquiry>,
-  remove: unavailable(notOnServer.enquiries) as (id: string) => Promise<void>,
+  list: async (): Promise<InboxEnquiry[]> => byNewest(pickList<ServerEnquiry>(await call<unknown>("/admin/enquiries"), "enquiries").map(toEnquiry)),
+  get: async (id: string): Promise<InboxEnquiry> => toEnquiry(pickOne<ServerEnquiry>(await call<unknown>(`/admin/enquiries/${path(id)}`), "enquiry")),
+  setStatus: async (id: string, status: EnquiryStatus): Promise<InboxEnquiry> => {
+    const body = await call<unknown>(`/admin/enquiries/${path(id)}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+    return toEnquiry(pickOne<ServerEnquiry>(body, "enquiry"));
+  },
+  remove: async (id: string): Promise<void> => {
+    await call(`/admin/enquiries/${path(id)}`, { method: "DELETE" });
+  },
 };
 
 // --- Contact messages (/admin/messages) -------------------------------------

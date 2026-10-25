@@ -11,6 +11,7 @@ import { formatDateTime, formatNaira, formatSize, negotiableText, premiumText } 
 import { BackLink, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 import type { DealClosing, Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
+import { sharingFormulaLabel } from "@/data/labels";
 
 type ClosedListing = Listing & { closing: DealClosing };
 
@@ -71,10 +72,10 @@ function DealDetail({ deal }: { deal: ClosedListing }) {
   ];
   if (deal.jv) {
     facts.push(
-      ["Sharing formula", `${deal.jv.sharingFormula} (${negotiableText(deal.jv.sharingNegotiable).toLowerCase()})`],
+      ["Sharing formula", `${sharingFormulaLabel(deal.jv.sharingFormula)} (${negotiableText(deal.jv.sharingNegotiable).toLowerCase()})`],
       ["Premium", premiumText(deal.jv.premium)],
       ["Build period", deal.jv.duration || "Not given"],
-      ["Proposal", deal.jv.proposal || "No"],
+      ["What can be built", deal.jv.proposal || "Open to proposals"],
     );
   }
 

@@ -37,8 +37,12 @@ export interface Listing {
   images: string[];
   /** The listing's video, if it has one (at most one), watermarked like the photos. */
   videos?: string[];
+  /** Copies of the title documents, for verifying ownership. Admin only; never shown on the website. */
+  supportedDocuments?: SubmittedDocument[];
   jv?: JvTerms;
   ownerName: string;
+  /** The owner's member account, when the owner is a member of the platform. */
+  userId?: string;
   /** The owner's contact details. Admin only; the website never shows them. */
   ownerEmail?: string;
   ownerPhone?: string;

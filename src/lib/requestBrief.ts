@@ -48,6 +48,7 @@ export const partnershipTypes: Option[] = [
   { value: "property_consultant", label: "Property consultant" },
   { value: "building_expert", label: "Building expert" },
 ];
+/** Older requests picked one of these; new ones are typed (e.g. "6 units of apartments"), which labelOf shows as typed. */
 export const housingProposals: Option[] = [
   { value: "apartment", label: "Apartments" },
   { value: "duplex", label: "Duplexes" },
@@ -61,12 +62,14 @@ export const titleDocuments: Option[] = [
   { value: "deed_of_assignment", label: "Deed of Assignment" },
   { value: "excision", label: "Excision" },
   { value: "gazzette", label: "Gazette" },
+  { value: "reg_survey", label: "Registered Survey" },
   { value: "any", label: "Any verified title" },
 ];
 export const sharingFormulas: Option[] = [
   { value: "30_70", label: "30% / 70%" },
   { value: "40_60", label: "40% / 60%" },
   { value: "50_50", label: "50% / 50%" },
+  { value: "55_45", label: "55% / 45%" },
   { value: "60_40", label: "60% / 40%" },
   { value: "open", label: "Open to discussion" },
 ];

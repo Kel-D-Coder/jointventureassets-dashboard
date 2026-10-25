@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FaArrowUpRightFromSquare, FaBuilding, FaCircleCheck, FaEnvelope, FaFileContract, FaFileSignature, FaPhone, FaTrashCan } from "react-icons/fa6";
+import { FaArrowUpRightFromSquare, FaBuilding, FaCircleCheck, FaEnvelope, FaFileContract, FaFileSignature, FaPhone } from "react-icons/fa6";
 import { inboxEnquiries } from "@/lib/api";
 import { listings, requests } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
@@ -11,9 +11,9 @@ import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";
 import { websiteUrl } from "@/data/site";
 import { documentTemplates } from "@/data/templates";
-import { enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
+import { sharingFormulaLabel, enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
 import { formatDateTime, formatNairaShort } from "@/lib/format";
-import { BackLink, Button, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
+import { BackLink, Button, Card, CardTitle, DeleteButton, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 import type { EnquiryStatus, InboxEnquiry, Listing, PartnerRequest } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
 
@@ -55,7 +55,6 @@ export default function EnquiryDetailPage() {
   };
 
   const destroy = async () => {
-    if (!window.confirm(`Delete the enquiry from ${enquiry.fullName}?`)) return;
     try {
       await remove.run(enquiry.id);
       navigate("/enquiries", { replace: true });
@@ -127,9 +126,7 @@ export default function EnquiryDetailPage() {
                 ))}
             </div>
             <div className="mt-5 border-t border-fg/8 pt-4">
-              <Button tone="danger" disabled={busy} onClick={destroy}>
-                <FaTrashCan aria-hidden="true" /> Delete enquiry
-              </Button>
+              <DeleteButton label="Delete enquiry" onConfirm={destroy} pending={remove.pending} disabled={busy} />
             </div>
           </Card>
         </div>
@@ -157,7 +154,7 @@ function SubjectCard({ enquiry, listing, request }: { enquiry: InboxEnquiry; lis
           <p className="mt-2 text-lg font-semibold text-fg">{target.title}</p>
           <p className="text-sm text-muted">
             {listing
-              ? `${listing.area}, ${listing.city} · ${formatNairaShort(listing.price)}${listing.jv ? ` · ${listing.jv.sharingFormula} sharing` : ""}`
+              ? `${listing.area}, ${listing.city} · ${formatNairaShort(listing.price)}${listing.jv ? ` · ${sharingFormulaLabel(listing.jv.sharingFormula)} sharing` : ""}`
               : (target.subtitle ?? "")}
           </p>
           {request ? (

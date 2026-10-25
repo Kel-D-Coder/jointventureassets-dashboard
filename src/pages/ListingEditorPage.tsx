@@ -5,15 +5,17 @@ import { listings, type ListingInput } from "@/lib/api";
 import { useAction } from "@/hooks/useResource";
 import { cx } from "@/lib/format";
 import { ImageUploader } from "@/components/ImageUploader";
-import { PersonLink } from "@/components/PersonLink";
 import { DealClosingFields } from "@/components/DealClosingFields";
 import { closingDraft, closingErrors, toClosing, type ClosingDraft, type ClosingErrors } from "@/lib/closing";
 import { COMPANY_OWNER, missingFor, type CheckedField } from "@/lib/listingChecks";
-import { listingStatusLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/data/labels";
+import { listingStatusLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulaOptions } from "@/data/labels";
 import { websiteUrl } from "@/data/site";
 import { Button, Card, CardTitle, Field, MoneyInput, Notice, NumberInput, PageHeader, SkeletonRows, Tabs, YesNo, inputClass, type YesNoValue } from "@/ui";
-import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType, PriceNegotiable } from "@/types";
+import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType, PriceNegotiable, SubmittedDocument } from "@/types";
 import { joinMedia, splitMedia } from "@/lib/videoWatermark";
+import { TitleDocumentPicker } from "@/components/TitleDocumentPicker";
+import { SupportingDocuments } from "@/components/SupportingDocuments";
+import { OwnerPicker } from "@/components/OwnerPicker";
 
 /** Form values — numbers stay as strings while they're being typed. */
 interface Draft {
@@ -29,13 +31,14 @@ interface Draft {
   description: string;
   highlights: string;
   images: string[];
+  /** Title documents for verification; optional. */
+  documents: SubmittedDocument[];
   sharingFormula: string;
   sharingNegotiable: YesNoValue;
   hasPremium: YesNoValue;
   /** Digits only. */
   premium: string;
-  /** Optional: "no" saves no proposal. */
-  hasProposal: YesNoValue;
+  /** Optional, typed: what a developer could build, e.g. "6 units of apartments". */
   proposal: string;
   duration: string;
   /** "company" lists it under Joint Venture Assets; "other" uses `ownerName`. */
@@ -43,6 +46,8 @@ interface Draft {
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
+  /** Set when the owner was picked from the platform's members. */
+  userId?: string;
   status: ListingStatus;
   /** Filled in when the status is "closed". */
   closing: ClosingDraft;
@@ -67,11 +72,11 @@ const emptyDraft: Draft = {
   description: "",
   highlights: "",
   images: [],
+  documents: [],
   sharingFormula: "40/60",
   sharingNegotiable: "",
   hasPremium: "",
   premium: "",
-  hasProposal: "no",
   proposal: "",
   duration: "",
   ownerMode: "company",
@@ -111,15 +116,16 @@ function draftFromListing(listing: Listing): Draft {
     description: listing.description,
     highlights: listing.highlights.join("\n"),
     images: joinMedia(listing.images, listing.videos),
+    documents: listing.supportedDocuments ?? [],
     sharingFormula: listing.jv?.sharingFormula ?? emptyDraft.sharingFormula,
     ...jvAnswers(listing.jv),
-    hasProposal: listing.jv?.proposal ? "yes" : "no",
     proposal: listing.jv?.proposal ?? "",
     duration: listing.jv?.duration ?? "",
     ownerMode: isCompany ? "company" : "other",
     ownerName: isCompany ? "" : listing.ownerName,
     ownerEmail: listing.ownerEmail ?? "",
     ownerPhone: listing.ownerPhone ?? "",
+    userId: listing.userId,
     status: listing.status,
     closing: closingDraft(listing.closing, listing.price),
     featured: listing.featured,
@@ -146,9 +152,9 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     description: listing.description,
     highlights: listing.highlights.join("\n"),
     images: joinMedia(listing.images, listing.videos),
+    documents: submission.documents ?? [],
     sharingFormula: listing.jv?.sharingFormula ?? emptyDraft.sharingFormula,
     ...jvAnswers(listing.jv),
-    hasProposal: listing.jv?.proposal ? "yes" : "no",
     proposal: listing.jv?.proposal ?? "",
     duration: listing.jv?.duration ?? "",
     ownerMode: listing.ownerName === COMPANY_OWNER ? "company" : "other",
@@ -197,6 +203,7 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     description: draft.description.trim(),
     highlights: draft.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
     ...splitMedia(draft.images),
+    supportedDocuments: draft.documents,
     jv:
       draft.dealType === "jv"
         ? {
@@ -204,13 +211,14 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
             sharingNegotiable: draft.sharingNegotiable ? draft.sharingNegotiable === "yes" : undefined,
             // "Yes" without an amount stays unanswered, so publishing asks for the amount.
             premium: draft.hasPremium === "no" ? 0 : draft.hasPremium === "yes" && Number(draft.premium) > 0 ? Number(draft.premium) : undefined,
-            proposal: draft.hasProposal === "yes" ? draft.proposal.trim() : "",
+            proposal: draft.proposal.trim(),
             duration: draft.duration.trim(),
           }
         : undefined,
     ownerName: draft.ownerMode === "company" ? COMPANY_OWNER : draft.ownerName.trim(),
     ownerEmail: draft.ownerMode === "company" ? undefined : draft.ownerEmail.trim() || undefined,
     ownerPhone: draft.ownerMode === "company" ? undefined : draft.ownerPhone.trim() || undefined,
+    userId: draft.ownerMode === "company" ? undefined : draft.userId,
     status,
     closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
@@ -328,10 +336,6 @@ export default function ListingEditorPage() {
     const missing = missingFor(toInput(draft, status));
     const closingProblemsNow = status === "closed" ? closingErrors(draft.closing) : {};
     setClosingProblems(closingProblemsNow);
-    // The proposal is optional, but "Yes" needs the proposal written in.
-    if (draft.dealType === "jv" && draft.hasProposal === "yes" && !draft.proposal.trim()) {
-      missing.push({ field: "proposal", label: "Proposal", message: "Describe the proposal, or choose No.", passes: () => false });
-    }
     setErrors(Object.fromEntries(missing.map((check) => [check.field, check.message])));
     if (Object.keys(closingProblemsNow).length) {
       setNotice({ tone: "error", text: "Fill in the closing details: when it closed, who with, and the agreed amount." });
@@ -428,7 +432,7 @@ export default function ListingEditorPage() {
             />
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <Field label="Title" error={errors.title} className="sm:col-span-2">
-                <input value={draft.title} onChange={(e) => set("title", e.target.value)} className={inputClass} />
+                <input value={draft.title} onChange={(e) => set("title", e.target.value.toUpperCase())} className={inputClass} />
               </Field>
               <Field label="Property type">
                 <select value={draft.propertyType} onChange={(e) => set("propertyType", e.target.value as PropertyType)} className={inputClass}>
@@ -437,13 +441,9 @@ export default function ListingEditorPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Title document">
-                <select value={draft.titleDocument} onChange={(e) => set("titleDocument", e.target.value)} className={inputClass}>
-                  {titleDocuments.map((doc) => (
-                    <option key={doc}>{doc}</option>
-                  ))}
-                </select>
-              </Field>
+              <div className="sm:col-span-2">
+                <TitleDocumentPicker value={draft.titleDocument} onChange={(value) => set("titleDocument", value)} error={errors.titleDocument} />
+              </div>
               <Field label="Size (sqm)" error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
                 <NumberInput value={draft.sizeSqm} onChange={(digits) => set("sizeSqm", digits)} />
               </Field>
@@ -480,13 +480,13 @@ export default function ListingEditorPage() {
           </Card>
 
           {draft.dealType === "jv" ? (
-            <Card>
+            <Card className="border-gold/30 bg-gold-soft/35">
               <CardTitle hint="What a developer would be signing up for.">Joint-venture terms</CardTitle>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Sharing formula" hint="Landowner / developer">
                   <select value={draft.sharingFormula} onChange={(e) => set("sharingFormula", e.target.value)} className={inputClass}>
-                    {sharingFormulas.map((formula) => (
-                      <option key={formula}>{formula}</option>
+                    {sharingFormulaOptions.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
                 </Field>
@@ -516,19 +516,9 @@ export default function ListingEditorPage() {
                 <Field label="Build period">
                   <input value={draft.duration} onChange={(e) => set("duration", e.target.value)} placeholder="e.g. 24 months" className={inputClass} />
                 </Field>
-                <YesNo
-                  name="hasProposal"
-                  legend="Is there a proposal? (optional)"
-                  value={draft.hasProposal}
-                  onChange={(value) => set("hasProposal", value)}
-                  yes="Yes"
-                  no="No"
-                />
-                {draft.hasProposal === "yes" ? (
-                  <Field label="Proposal" error={errors.proposal}>
-                    <input value={draft.proposal} onChange={(e) => set("proposal", e.target.value)} placeholder="e.g. 12 units of 3-bed apartments" className={inputClass} />
-                  </Field>
-                ) : null}
+                <Field label="What can be built here? (optional)" hint="Type it in your own words. Leave blank if open to the developer's ideas." className="sm:col-span-2">
+                  <textarea rows={3} value={draft.proposal} onChange={(e) => set("proposal", e.target.value)} placeholder="e.g. 6 units of apartments, 3 units of duplexes" className={inputClass} />
+                </Field>
               </div>
             </Card>
           ) : null}
@@ -558,6 +548,11 @@ export default function ListingEditorPage() {
             <CardTitle hint="The first photo is the cover on listing cards. Drag in several at once.">Photos</CardTitle>
             <ImageUploader images={draft.images} onChange={(images) => set("images", images)} error={errors.images} />
           </Card>
+
+          <Card>
+            <CardTitle hint="Copies of the title documents ticked above, so ownership can be verified. Optional, but recommended.">Supporting documents</CardTitle>
+            <SupportingDocuments documents={draft.documents} onChange={(documents) => set("documents", documents)} titleDocument={draft.titleDocument} />
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -577,24 +572,13 @@ export default function ListingEditorPage() {
                   </label>
                 </div>
                 {draft.ownerMode === "other" ? (
-                  <Field label="Owner's name" error={errors.ownerName} className="mt-3">
-                    <input value={draft.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="Person or company" className={inputClass} />
-                  </Field>
-                ) : null}
-                {draft.ownerMode === "other" ? (
-                  <>
-                    <Field label="Owner's email" className="mt-3">
-                      <input type="email" value={draft.ownerEmail} onChange={(e) => set("ownerEmail", e.target.value)} className={inputClass} />
-                    </Field>
-                    <Field label="Owner's phone" hint="Only the JVA team sees these." className="mt-3">
-                      <input type="tel" value={draft.ownerPhone} onChange={(e) => set("ownerPhone", e.target.value)} className={inputClass} />
-                    </Field>
-                    {draft.ownerName.trim() && draft.ownerEmail.trim() ? (
-                      <p className="mt-2 text-xs text-muted">
-                        <PersonLink name={draft.ownerName.trim()} email={draft.ownerEmail.trim()} showRole className="font-semibold text-fg" />
-                      </p>
-                    ) : null}
-                  </>
+                  <OwnerPicker
+                    value={{ userId: draft.userId, name: draft.ownerName, email: draft.ownerEmail, phone: draft.ownerPhone }}
+                    onChange={(owner) =>
+                      setDraft((current) => ({ ...current, userId: owner.userId, ownerName: owner.name, ownerEmail: owner.email, ownerPhone: owner.phone }))
+                    }
+                    error={errors.ownerName}
+                  />
                 ) : null}
               </fieldset>
 
