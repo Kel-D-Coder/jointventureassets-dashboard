@@ -23,11 +23,17 @@ function loadLogo(): Promise<HTMLImageElement> {
   return logo;
 }
 
-export async function stampWatermark(canvas: HTMLCanvasElement): Promise<void> {
-  const ctx = canvas.getContext("2d")!;
-  const { width, height } = canvas;
-  const image = await loadLogo().catch(() => null);
+/** The logo, loaded once; null if it couldn't be loaded (the web address is still drawn). */
+export function loadWatermarkLogo(): Promise<HTMLImageElement | null> {
+  return loadLogo().catch(() => null);
+}
 
+export async function stampWatermark(canvas: HTMLCanvasElement): Promise<void> {
+  drawWatermark(canvas.getContext("2d")!, canvas.width, canvas.height, await loadWatermarkLogo());
+}
+
+/** Draws the mark straight away, so it can run on every frame of a video (see videoWatermark.ts). */
+export function drawWatermark(ctx: CanvasRenderingContext2D, width: number, height: number, image: HTMLImageElement | null): void {
   const logoWidth = Math.min(width * 0.42, 620);
   const logoHeight = image ? (logoWidth * image.naturalHeight) / image.naturalWidth : 0;
   const fontSize = Math.max(12, Math.round(logoWidth * 0.072));
@@ -44,7 +50,7 @@ export async function stampWatermark(canvas: HTMLCanvasElement): Promise<void> {
   }
   ctx.globalAlpha = 0.6;
   ctx.fillStyle = "#ffffff";
-  ctx.font = `700 ${fontSize}px Manrope, ui-sans-serif, system-ui, sans-serif`;
+  ctx.font = `700 ${fontSize}px "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(WEBSITE, width / 2, top + logoHeight + fontSize * 0.4);

@@ -1,4 +1,5 @@
 import type { ListingInput } from "@/lib/api";
+import { isVideoUrl } from "@/lib/videoWatermark";
 
 /** The company, used as a listing's owner unless another owner is entered. */
 export const COMPANY_OWNER = "Joint Venture Assets";
@@ -14,7 +15,8 @@ export type CheckedField =
   | "images"
   | "proposal"
   | "sharingNegotiable"
-  | "premium";
+  | "premium"
+  | "priceNegotiable";
 
 export interface Check {
   field: CheckedField;
@@ -31,7 +33,7 @@ export interface Check {
  */
 const checks: Check[] = [
   { field: "title", label: "Title", message: "Give the listing a title.", passes: (l) => Boolean(l.title.trim()) },
-  { field: "images", label: "Photos", message: "Upload at least one photo.", passes: (l) => l.images.length > 0 },
+  { field: "images", label: "Photos", message: "Upload at least one photo.", passes: (l) => l.images.some((url) => !isVideoUrl(url)) },
   { field: "sizeSqm", label: "Size", message: "Enter the size in square metres.", passes: (l) => l.sizeSqm > 0 },
   { field: "price", label: "Price", message: "Enter an amount in naira.", passes: (l) => l.price > 0 },
   { field: "area", label: "Area", message: "Add the area.", passes: (l) => Boolean(l.area.trim()) },
@@ -52,6 +54,14 @@ const checks: Check[] = [
   },
 ];
 
+// Sale listings say how open the asking price is.
+checks.push({
+  field: "priceNegotiable",
+  label: "Negotiable?",
+  message: "Say whether the price is negotiable.",
+  passes: (l) => l.dealType !== "sale" || Boolean(l.priceNegotiable),
+});
+
 const jvOnly: CheckedField[] = ["sharingNegotiable", "premium"];
 
 /** The checks a listing fails, in the order a person would fill the form. */
@@ -61,7 +71,9 @@ export function missingFor(listing: ListingInput): Check[] {
 
 /** 0–100: how much of the required information a draft has. */
 export function completeness(listing: ListingInput): number {
-  const applicable = checks.filter((check) => !jvOnly.includes(check.field) || listing.dealType === "jv");
+  const applicable = checks.filter(
+    (check) => (!jvOnly.includes(check.field) || listing.dealType === "jv") && (check.field !== "priceNegotiable" || listing.dealType === "sale"),
+  );
   const done = applicable.filter((check) => check.passes(listing)).length;
   return Math.round((done / applicable.length) * 100);
 }

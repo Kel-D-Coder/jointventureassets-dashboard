@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
@@ -29,11 +29,12 @@
   --color-danger: #b91c1c;
   --color-info: #1d4ed8;
 
-  /* The console is set in Manrope throughout. Fraunces is kept for the brand
-     wordmark and for the documents the templates produce. */
-  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Fraunces", Georgia, ui-serif, serif;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  /* The console is set in Plus Jakarta Sans throughout, like the website's body text.
+     Cormorant Garamond (the website's heading face) is kept for the brand wordmark
+     and for the documents the templates produce. */
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, ui-serif, serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 @utility theme-dark {
@@ -78,6 +79,12 @@
   input[type="reset"],
   select {
     cursor: pointer;
+  }
+
+  /* Cormorant reads best a little heavier, with figures that sit on the line. */
+  .font-serif {
+    font-weight: 600;
+    font-variant-numeric: lining-nums;
   }
 
   ::selection {

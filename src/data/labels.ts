@@ -1,5 +1,5 @@
 import type { PillTone } from "@/ui";
-import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PropertyType, RequestStatus } from "@/types";
+import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PropertyType, RequestStatus, PriceNegotiable } from "@/types";
 
 export const dealTypeLabel: Record<DealType, string> = {
   jv: "Joint venture",
@@ -47,3 +47,11 @@ export const submissionStatusTone: Record<SubmissionStatus, PillTone> = { draft:
 
 export const accountStatusLabel: Record<AccountStatus, string> = { pending: "Awaiting approval", active: "Active", suspended: "Suspended" };
 export const accountStatusTone: Record<AccountStatus, PillTone> = { pending: "warning", active: "success", suspended: "danger" };
+
+/** Sale listings: how open the asking price is. */
+export const priceNegotiableLabel: Record<PriceNegotiable, string> = {
+  negotiable: "Negotiable",
+  slightly_negotiable: "Slightly negotiable",
+  fixed: "Not negotiable",
+};
+export const priceNegotiableOptions = Object.keys(priceNegotiableLabel) as PriceNegotiable[];

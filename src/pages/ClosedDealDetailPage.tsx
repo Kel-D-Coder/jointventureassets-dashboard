@@ -10,6 +10,7 @@ import { DealTypePill } from "@/components/StatusPills";
 import { formatDateTime, formatNaira, formatSize, negotiableText, premiumText } from "@/lib/format";
 import { BackLink, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 import type { DealClosing, Listing } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 type ClosedListing = Listing & { closing: DealClosing };
 
@@ -82,7 +83,7 @@ function DealDetail({ deal }: { deal: ClosedListing }) {
     <div className="space-y-6">
       <Card>
         <div className="flex flex-col gap-4 sm:flex-row">
-          {deal.images[0] ? <img src={deal.images[0]} alt="" className="h-28 w-full shrink-0 rounded-lg object-cover sm:w-44" /> : null}
+          {coverOf(deal.images) ? <img src={coverOf(deal.images)} alt="" className="h-28 w-full shrink-0 rounded-lg object-cover sm:w-44" /> : null}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1.5">
               <DealTypePill dealType={deal.dealType} />

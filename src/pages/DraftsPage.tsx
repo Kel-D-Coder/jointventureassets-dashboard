@@ -8,6 +8,7 @@ import { completeness, missingFor } from "@/lib/listingChecks";
 import { formatNairaShort, timeAgo } from "@/lib/format";
 import { Button, EmptyState, Notice, PageHeader, SkeletonRows } from "@/ui";
 import type { Listing } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 export default function DraftsPage() {
   const { data = [], loading, error, reload } = useResource(listings.list, "Couldn't load the drafts. Try again.");
@@ -58,8 +59,8 @@ export default function DraftsPage() {
             const percent = completeness(draft);
             return (
               <li key={draft.id} className="flex flex-col gap-4 rounded-xl border border-fg/[0.08] bg-raised p-4 sm:flex-row sm:items-center">
-                {draft.images[0] ? (
-                  <img src={draft.images[0]} alt="" className="h-24 w-full shrink-0 rounded-xl object-cover sm:w-36" />
+                {coverOf(draft.images) ? (
+                  <img src={coverOf(draft.images)} alt="" className="h-24 w-full shrink-0 rounded-xl object-cover sm:w-36" />
                 ) : (
                   <div className="grid h-24 w-full shrink-0 place-items-center rounded-xl bg-surface text-ash sm:w-36">
                     <FaImage aria-hidden="true" className="h-6 w-6" />

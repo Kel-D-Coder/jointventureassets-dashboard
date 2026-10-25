@@ -1,16 +1,18 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FaCheck, FaFileContract, FaTrashCan, FaXmark } from "react-icons/fa6";
+import { FaCheck, FaFileContract, FaTrashCan, FaVideo, FaXmark } from "react-icons/fa6";
 import { DocumentList } from "@/components/DocumentList";
 import { ContactCard } from "@/components/ContactCard";
 import { PersonLink } from "@/components/PersonLink";
 import { listingSubmissions } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { DealTypePill } from "@/components/StatusPills";
-import { propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone } from "@/data/labels";
+import { priceNegotiableLabel, propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone } from "@/data/labels";
 import { cx, formatDateTime, formatNaira, formatSize, negotiableText, premiumText } from "@/lib/format";
 import { BackLink, Button, Card, CardTitle, Field, Notice, PageHeader, Pill, SkeletonRows, inputClass } from "@/ui";
 import type { ListingSubmission, SubmittedDocument } from "@/types";
+import { isVideoUrl } from "@/lib/videoWatermark";
+import { joinMedia } from "@/lib/videoWatermark";
 
 export default function ListingRequestDetailPage() {
   const { submissionId = "" } = useParams();
@@ -100,6 +102,8 @@ function SubmissionDetail({
 }) {
   const navigate = useNavigate();
   const { listing, contact } = submission;
+  /** Photos, then the video if there is one. */
+  const media = joinMedia(listing.images, listing.videos);
   const [photo, setPhoto] = useState(0);
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState("");
@@ -113,20 +117,30 @@ function SubmissionDetail({
           <Pill tone={statusTone[submission.status]}>{statusLabel[submission.status]}</Pill>
         </div>
 
-        {listing.images.length ? (
+        {media.length ? (
           <div className="mt-5">
-            <img src={listing.images[photo]} alt={`${listing.title}, photo ${photo + 1}`} className="aspect-16/9 w-full rounded-xl object-cover" />
-            {listing.images.length > 1 ? (
+            {isVideoUrl(media[photo] ?? "") ? (
+              <video key={media[photo]} src={media[photo]} controls playsInline className="aspect-16/9 w-full rounded-xl bg-ink object-contain" />
+            ) : (
+              <img src={media[photo]} alt={`${listing.title}, photo ${photo + 1}`} className="aspect-16/9 w-full rounded-xl object-cover" />
+            )}
+            {media.length > 1 ? (
               <div className="mt-2 flex gap-2 overflow-x-auto">
-                {listing.images.map((src, index) => (
+                {media.map((src, index) => (
                   <button
                     key={src.slice(-24) + index}
                     type="button"
                     onClick={() => setPhoto(index)}
-                    aria-label={`Show photo ${index + 1}`}
+                    aria-label={isVideoUrl(src) ? "Show the video" : `Show photo ${index + 1}`}
                     className={cx("overflow-hidden rounded-lg border-2", index === photo ? "border-gold" : "border-transparent opacity-60 hover:opacity-100")}
                   >
-                    <img src={src} alt="" className="h-14 w-20 object-cover" />
+                    {isVideoUrl(src) ? (
+                      <span className="grid h-14 w-20 place-items-center bg-ink text-gold">
+                        <FaVideo aria-hidden="true" />
+                      </span>
+                    ) : (
+                      <img src={src} alt="" className="h-14 w-20 object-cover" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -149,6 +163,9 @@ function SubmissionDetail({
                 <Fact label="Proposal">{listing.jv.proposal || "No"}</Fact>
               </div>
             </>
+          ) : null}
+          {listing.dealType === "sale" ? (
+            <Fact label="Price negotiable">{listing.priceNegotiable ? priceNegotiableLabel[listing.priceNegotiable] : "Not stated"}</Fact>
           ) : null}
           {listing.dealType === "sale" ? (
             <div className="sm:col-span-2">

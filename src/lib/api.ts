@@ -5,11 +5,12 @@
  * listing requests sent from the website, members' requests and members.
  * Sign-in and file uploads use the shared auth and upload endpoints.
  *
- * It has no endpoints yet for reading enquiries or contact messages. Those
- * calls are in `notOnServer` below and the pages that use them say so.
+ * Contact messages come from /admin/messages. It has no endpoint yet for
+ * reading enquiries; that call is in `notOnServer` below and its page says so.
  */
 import { demoEnquiries, demoMessages, demoSend } from "@/lib/demoApi";
 import { readStored, removeStored } from "@/lib/storage";
+import { joinMedia, splitMedia } from "@/lib/videoWatermark";
 import type {
   AdminSession,
   ContactMessage,
@@ -126,9 +127,10 @@ export const auth = {
 
 /** POST /upload: stores a file and returns its public URL. Data URLs from the editor are uploaded; URLs pass through. */
 export async function uploadIfNeeded(url: string, name: string): Promise<string> {
-  if (!url.startsWith("data:")) return url;
+  // data: URLs are photos from the editor; blob: URLs are prepared videos (see videoWatermark.ts).
+  if (!url.startsWith("data:") && !url.startsWith("blob:")) return url;
   const blob = await (await fetch(url)).blob();
-  const extension = blob.type.split("/")[1] || "bin";
+  const extension = blob.type.split(";")[0]!.split("/")[1] || "bin";
   const form = new FormData();
   form.append("file", new File([blob], name.includes(".") ? name : `${name}.${extension}`, { type: blob.type }));
   const body = await call<{ url: string }>("/upload", { method: "POST", body: form });
@@ -226,7 +228,7 @@ function toListing(listing: ServerListing): Listing {
     titleDocument: listing.titleDocument ?? "",
     description: listing.description ?? "",
     highlights: listing.highlights ?? [],
-    images: listing.images ?? [],
+    ...splitMedia(joinMedia(listing.images, listing.videos)),
     jv: listing.jv ?? undefined,
     ownerName: listing.ownerName ?? "",
     ownerEmail: listing.ownerEmail ?? undefined,
@@ -241,11 +243,13 @@ function toListing(listing: ServerListing): Listing {
   };
 }
 
-/** Photos and closing documents picked in the editor are uploaded first; the server stores their URLs. */
+/** Photos, the video and closing documents picked in the editor are uploaded first; the server stores their URLs. */
 async function toListingBody(input: ListingInput): Promise<ListingInput> {
-  const images = await Promise.all(input.images.map((url, index) => uploadIfNeeded(url, `photo-${index + 1}`)));
+  const media = splitMedia(joinMedia(input.images, input.videos));
+  const images = await Promise.all(media.images.map((url, index) => uploadIfNeeded(url, `photo-${index + 1}`)));
+  const videos = await Promise.all(media.videos.map((url) => uploadIfNeeded(url, "video")));
   const closing = input.closing ? { ...input.closing, documents: await uploadDocuments(input.closing.documents) } : undefined;
-  return { ...input, images, closing, jv: input.dealType === "jv" ? input.jv : undefined };
+  return { ...input, images, videos, closing, jv: input.dealType === "jv" ? input.jv : undefined };
 }
 
 /** An approved listing request is live on the website; the dashboard shows it as a published listing with the request's id. */
@@ -415,7 +419,6 @@ export async function sendProfileReminder(memberId: string): Promise<void> {
 /** What each page says while its endpoint doesn't exist. */
 export const notOnServer = {
   enquiries: "The server doesn't have an endpoint for enquiries yet, so enquiries sent from the website can't be shown here.",
-  messages: "Contact messages are sent to the server, but it has no endpoint for reading them yet.",
 } as const;
 
 const unavailable = (text: string) => () => Promise.reject(new Error(text));
@@ -427,11 +430,37 @@ const serverInboxEnquiries = {
   remove: unavailable(notOnServer.enquiries) as (id: string) => Promise<void>,
 };
 
+// --- Contact messages (/admin/messages) -------------------------------------
+
+/** The website's contact form sends the email as `emailAddress`; listing and request enquiries arrive here too. */
+type ServerMessage = Partial<Omit<ContactMessage, "read">> & WithId & { emailAddress?: string; read?: boolean | null; isRead?: boolean | null };
+
+function toMessage(message: ServerMessage): ContactMessage {
+  return {
+    id: idOf(message),
+    fullName: message.fullName ?? "",
+    email: message.email ?? message.emailAddress ?? "",
+    phoneNumber: message.phoneNumber ?? "",
+    consultationType: message.consultationType ?? "",
+    subject: message.subject ?? "",
+    message: message.message ?? "",
+    read: Boolean(message.read ?? message.isRead),
+    createdAt: message.createdAt ?? new Date().toISOString(),
+  };
+}
+
 const serverMessages = {
-  list: async (): Promise<ContactMessage[]> => [],
-  get: unavailable(notOnServer.messages) as (id: string) => Promise<ContactMessage>,
-  setRead: unavailable(notOnServer.messages) as (id: string, read: boolean) => Promise<void>,
-  remove: unavailable(notOnServer.messages) as (id: string) => Promise<void>,
+  list: async (): Promise<ContactMessage[]> =>
+    byNewest(pickList<ServerMessage>(await call<unknown>("/admin/messages"), "messages", "contacts").map(toMessage)),
+  // The reply's `message` field is the record here, not a status sentence; pickOne only takes objects.
+  get: async (id: string): Promise<ContactMessage> =>
+    toMessage(pickOne<ServerMessage>(await call<unknown>(`/admin/messages/${path(id)}`), "message", "contactMessage", "contact")),
+  setRead: async (id: string, read: boolean): Promise<void> => {
+    await call(`/admin/messages/${path(id)}/read`, { method: "PATCH", body: JSON.stringify({ read }) });
+  },
+  remove: async (id: string): Promise<void> => {
+    await call(`/admin/messages/${path(id)}`, { method: "DELETE" });
+  },
 };
 
 export interface SignatureRequest {

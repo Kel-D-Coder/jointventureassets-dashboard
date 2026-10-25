@@ -44,7 +44,7 @@ export function watermarkDataUrl(): Promise<string> {
     const ctx = canvas.getContext("2d")!;
     ctx.globalAlpha = STRENGTH;
     ctx.drawImage(logo, crop.x, crop.y, crop.w, crop.h, 0, 0, width, logoHeight);
-    ctx.font = "600 72px Manrope, ui-sans-serif, sans-serif";
+    ctx.font = '600 72px "Plus Jakarta Sans", ui-sans-serif, sans-serif';
     ctx.fillStyle = "#7a5c14";
     ctx.textAlign = "center";
     ctx.fillText(WEBSITE, width / 2, logoHeight + 115);

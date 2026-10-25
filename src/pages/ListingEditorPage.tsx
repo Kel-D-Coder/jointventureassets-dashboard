@@ -3,15 +3,17 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { FaArrowLeft, FaArrowUpRightFromSquare, FaFloppyDisk, FaTrashCan } from "react-icons/fa6";
 import { listings, type ListingInput } from "@/lib/api";
 import { useAction } from "@/hooks/useResource";
+import { cx } from "@/lib/format";
 import { ImageUploader } from "@/components/ImageUploader";
 import { PersonLink } from "@/components/PersonLink";
 import { DealClosingFields } from "@/components/DealClosingFields";
 import { closingDraft, closingErrors, toClosing, type ClosingDraft, type ClosingErrors } from "@/lib/closing";
 import { COMPANY_OWNER, missingFor, type CheckedField } from "@/lib/listingChecks";
-import { listingStatusLabel, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/data/labels";
+import { listingStatusLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulas, titleDocuments } from "@/data/labels";
 import { websiteUrl } from "@/data/site";
 import { Button, Card, CardTitle, Field, MoneyInput, Notice, NumberInput, PageHeader, SkeletonRows, Tabs, YesNo, inputClass, type YesNoValue } from "@/ui";
-import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType } from "@/types";
+import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType, PriceNegotiable } from "@/types";
+import { joinMedia, splitMedia } from "@/lib/videoWatermark";
 
 /** Form values — numbers stay as strings while they're being typed. */
 interface Draft {
@@ -46,6 +48,8 @@ interface Draft {
   closing: ClosingDraft;
   featured: boolean;
   verified: boolean;
+  /** Sale listings: how open the asking price is. */
+  priceNegotiable: "" | PriceNegotiable;
   /** The website listing submission this came from, if any. */
   sourceSubmissionId?: string;
 }
@@ -78,6 +82,7 @@ const emptyDraft: Draft = {
   closing: closingDraft(),
   featured: false,
   verified: false,
+  priceNegotiable: "",
 };
 
 const publishedStatuses: ListingStatus[] = ["published", "under_offer", "closed"];
@@ -105,7 +110,7 @@ function draftFromListing(listing: Listing): Draft {
     titleDocument: listing.titleDocument,
     description: listing.description,
     highlights: listing.highlights.join("\n"),
-    images: listing.images,
+    images: joinMedia(listing.images, listing.videos),
     sharingFormula: listing.jv?.sharingFormula ?? emptyDraft.sharingFormula,
     ...jvAnswers(listing.jv),
     hasProposal: listing.jv?.proposal ? "yes" : "no",
@@ -119,6 +124,7 @@ function draftFromListing(listing: Listing): Draft {
     closing: closingDraft(listing.closing, listing.price),
     featured: listing.featured,
     verified: listing.verified,
+    priceNegotiable: listing.priceNegotiable ?? "",
     sourceSubmissionId: listing.sourceSubmissionId,
   };
 }
@@ -127,6 +133,7 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
   const { listing } = submission;
   return {
     ...emptyDraft,
+    priceNegotiable: listing.priceNegotiable ?? "",
     title: listing.title,
     dealType: listing.dealType,
     propertyType: listing.propertyType,
@@ -138,7 +145,7 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     titleDocument: listing.titleDocument,
     description: listing.description,
     highlights: listing.highlights.join("\n"),
-    images: listing.images,
+    images: joinMedia(listing.images, listing.videos),
     sharingFormula: listing.jv?.sharingFormula ?? emptyDraft.sharingFormula,
     ...jvAnswers(listing.jv),
     hasProposal: listing.jv?.proposal ? "yes" : "no",
@@ -189,7 +196,7 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     titleDocument: draft.titleDocument,
     description: draft.description.trim(),
     highlights: draft.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
-    images: draft.images,
+    ...splitMedia(draft.images),
     jv:
       draft.dealType === "jv"
         ? {
@@ -208,6 +215,7 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
     verified: draft.verified,
+    priceNegotiable: draft.dealType === "sale" && draft.priceNegotiable ? draft.priceNegotiable : undefined,
     sourceSubmissionId: draft.sourceSubmissionId,
   };
 }
@@ -443,6 +451,32 @@ export default function ListingEditorPage() {
                 <MoneyInput value={draft.price} onChange={(digits) => set("price", digits)} />
               </Field>
             </div>
+            {draft.dealType === "sale" ? (
+              <fieldset className="mt-5">
+                <legend className="mb-1.5 block text-[0.8125rem] font-medium text-fg">Is the price negotiable?</legend>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {priceNegotiableOptions.map((option) => (
+                    <label
+                      key={option}
+                      className={cx(
+                        "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-sm text-fg shadow-xs has-checked:border-gold has-checked:bg-gold-soft/40",
+                        errors.priceNegotiable ? "border-danger" : "border-fg/[0.13]",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="priceNegotiable"
+                        checked={draft.priceNegotiable === option}
+                        onChange={() => set("priceNegotiable", option)}
+                        className="accent-[#c9a24a]"
+                      />
+                      {priceNegotiableLabel[option]}
+                    </label>
+                  ))}
+                </div>
+                {errors.priceNegotiable ? <span className="mt-1 block text-xs font-medium text-danger">{errors.priceNegotiable}</span> : null}
+              </fieldset>
+            ) : null}
           </Card>
 
           {draft.dealType === "jv" ? (

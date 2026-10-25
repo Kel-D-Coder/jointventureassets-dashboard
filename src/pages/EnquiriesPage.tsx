@@ -9,6 +9,7 @@ import { enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
 import { formatDateTime, timeAgo } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, Pill, RowLink, SkeletonRows, Table, Tabs, inputClass } from "@/ui";
 import type { EnquiryStatus, InboxEnquiry, Listing } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 type StatusFilter = EnquiryStatus | "all";
 type LoiFilter = "all" | "wants" | "own";
@@ -200,7 +201,7 @@ export default function EnquiriesPage() {
 }
 
 function SubjectThumb({ enquiry, listing }: { enquiry: InboxEnquiry; listing?: Listing }) {
-  const image = listing?.images[0] ?? enquiry.target.image;
+  const image = (listing ? coverOf(listing.images) : undefined) ?? enquiry.target.image;
   if (image) return <img src={image} alt="" className="h-10 w-12 shrink-0 rounded-md object-cover" />;
   return (
     <span className="grid h-10 w-12 shrink-0 place-items-center rounded-md bg-surface text-ash">

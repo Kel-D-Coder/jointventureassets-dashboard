@@ -10,6 +10,7 @@ import { requestStatusLabel, requestTypeLabel } from "@/data/labels";
 import { formatNairaShort, timeAgo } from "@/lib/format";
 import { Card, CardTitle, EmptyState, Notice, PageHeader, SkeletonRows, StatCard } from "@/ui";
 import type { RequestStatus } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -157,7 +158,7 @@ export default function OverviewPage() {
             {topListings.map((listing) => (
               <li key={listing.id}>
                 <Link to={`/enquiries?listing=${listing.id}`} className="flex items-center gap-4 rounded-xl p-2 -m-2 hover:bg-surface">
-                  <img src={listing.images[0]} alt="" className="h-14 w-20 shrink-0 rounded-lg object-cover" />
+                  <img src={coverOf(listing.images)} alt="" className="h-14 w-20 shrink-0 rounded-lg object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-fg">{listing.title}</p>
                     <p className="truncate text-xs text-muted">

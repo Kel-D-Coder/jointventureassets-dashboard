@@ -35,12 +35,16 @@ export interface Listing {
   description: string;
   highlights: string[];
   images: string[];
+  /** The listing's video, if it has one (at most one), watermarked like the photos. */
+  videos?: string[];
   jv?: JvTerms;
   ownerName: string;
   /** The owner's contact details. Admin only; the website never shows them. */
   ownerEmail?: string;
   ownerPhone?: string;
   status: ListingStatus;
+  /** Sale listings: whether the asking price is negotiable. Missing on older listings. */
+  priceNegotiable?: PriceNegotiable;
   featured: boolean;
   verified: boolean;
   views: number;
@@ -141,3 +145,6 @@ export type {
   SubmittedDocument,
   SubmittedListing,
 } from "./inbox";
+
+/** Sale listings: how much room there is on the asking price. */
+export type PriceNegotiable = "negotiable" | "slightly_negotiable" | "fixed";

@@ -9,6 +9,7 @@ import { listingStatusLabel, propertyTypeLabel } from "@/data/labels";
 import { formatNairaShort, formatSize } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, SkeletonRows, Tabs, inputClass } from "@/ui";
 import type { DealType, Listing, ListingStatus } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 type DealFilter = DealType | "all";
 type StatusFilter = ListingStatus | "all";
@@ -119,7 +120,7 @@ function ListingCard({ listing, enquiries }: { listing: Listing; enquiries: numb
       className="group block h-full overflow-hidden rounded-xl border border-fg/[0.08] bg-raised transition-shadow hover:shadow-[0_10px_30px_-12px_rgb(14_17_22/0.25)]"
     >
       <div className="relative">
-        <img src={listing.images[0]} alt="" className="aspect-16/10 w-full object-cover" />
+        <img src={coverOf(listing.images)} alt="" className="aspect-16/10 w-full object-cover" />
         <div className="absolute top-3 left-3 flex gap-1.5">
           <DealTypePill dealType={listing.dealType} />
           <span className="rounded-full bg-raised"><ListingStatusPill status={listing.status} /></span>

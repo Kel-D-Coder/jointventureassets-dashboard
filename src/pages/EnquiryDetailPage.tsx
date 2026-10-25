@@ -15,6 +15,7 @@ import { enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
 import { formatDateTime, formatNairaShort } from "@/lib/format";
 import { BackLink, Button, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 import type { EnquiryStatus, InboxEnquiry, Listing, PartnerRequest } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 /** The enquiry, plus the listing or request it's about when that still exists here. */
 async function loadEnquiry(id: string) {
@@ -139,7 +140,7 @@ export default function EnquiryDetailPage() {
 
 function SubjectCard({ enquiry, listing, request }: { enquiry: InboxEnquiry; listing?: Listing; request?: PartnerRequest }) {
   const { target } = enquiry;
-  const image = listing?.images[0] ?? target.image;
+  const image = (listing ? coverOf(listing.images) : undefined) ?? target.image;
   return (
     <Card>
       <CardTitle>About</CardTitle>

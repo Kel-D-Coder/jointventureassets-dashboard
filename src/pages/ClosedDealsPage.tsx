@@ -8,6 +8,7 @@ import { DealTypePill } from "@/components/StatusPills";
 import { cx, formatDate, formatNairaShort } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, RowLink, SkeletonRows, StatCard, Table, Tabs, inputClass } from "@/ui";
 import type { DealClosing, DealType, Listing } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 type ClosedListing = Listing & { closing: DealClosing };
 type TypeFilter = DealType | "all";
@@ -146,8 +147,8 @@ export default function ClosedDealsPage() {
             <RowLink key={deal.id} to={`/closed-deals/${deal.id}`}>
               <td>
                 <Link to={`/closed-deals/${deal.id}`} className="flex items-center gap-3">
-                  {deal.images[0] ? (
-                    <img src={deal.images[0]} alt="" className="h-10 w-12 shrink-0 rounded-md object-cover" />
+                  {coverOf(deal.images) ? (
+                    <img src={coverOf(deal.images)} alt="" className="h-10 w-12 shrink-0 rounded-md object-cover" />
                   ) : (
                     <span className="grid h-10 w-12 shrink-0 place-items-center rounded-md bg-surface text-ash">
                       <FaHandshake aria-hidden="true" />

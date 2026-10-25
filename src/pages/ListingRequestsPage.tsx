@@ -9,6 +9,7 @@ import { submissionStatusLabel, submissionStatusTone } from "@/data/labels";
 import { cx, formatDateTime, formatNairaShort, timeAgo } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, Pill, RowLink, SkeletonRows, Table, Tabs } from "@/ui";
 import type { SubmissionStatus } from "@/types";
+import { coverOf } from "@/lib/videoWatermark";
 
 type StatusFilter = Exclude<SubmissionStatus, "draft"> | "all";
 
@@ -67,8 +68,8 @@ export default function ListingRequestsPage() {
               <RowLink key={submission.id} to={`/listing-requests/${submission.id}`}>
                 <td>
                   <Link to={`/listing-requests/${submission.id}`} className="flex items-center gap-3">
-                    {listing.images[0] ? (
-                      <img src={listing.images[0]} alt="" className="h-10 w-12 shrink-0 rounded-md object-cover" />
+                    {coverOf(listing.images) ? (
+                      <img src={coverOf(listing.images)} alt="" className="h-10 w-12 shrink-0 rounded-md object-cover" />
                     ) : (
                       <span className="h-10 w-12 shrink-0 rounded-md bg-surface" />
                     )}

@@ -67,10 +67,14 @@ export interface SubmittedListing {
   description: string;
   highlights: string[];
   images: string[];
+  /** The listing's video, if it has one (at most one), watermarked like the photos. */
+  videos?: string[];
   jv?: { sharingFormula: string; sharingNegotiable?: boolean; premium?: number; proposal: string; duration: string };
   ownerName: string;
   /** Sale listings: the seller agreed to pay JVA's facilitation fee out of the sale price. */
   saleTerms?: { acceptedFeeTerms: true; feeRate: number };
+  /** Sale listings: whether the asking price is negotiable. */
+  priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
 }
 
 /** A visitor asking for their property to be listed. Reviewed in the dashboard's "Listing requests". */
