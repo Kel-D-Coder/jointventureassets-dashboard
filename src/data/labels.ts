@@ -1,5 +1,6 @@
 import type { PillTone } from "@/ui";
-import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PropertyType, RequestStatus, PriceNegotiable } from "@/types";
+import type { AccountStatus, DealType, EnquiryStatus, SubmissionStatus, ListingStatus, PlotOption, PropertyType, RequestStatus, PriceNegotiable } from "@/types";
+import { formatNaira, formatNairaShort, formatSize } from "@/lib/format";
 
 export const dealTypeLabel: Record<DealType, string> = {
   jv: "Joint venture",
@@ -30,6 +31,7 @@ export { requestTypeLabel } from "@/lib/requestBrief";
 
 export const titleDocuments = [
   "C of O",
+  "Global C of O",
   "Governor's Consent",
   "Deed of Assignment",
   "Excision",
@@ -100,3 +102,83 @@ export const priceNegotiableLabel: Record<PriceNegotiable, string> = {
   fixed: "Not negotiable",
 };
 export const priceNegotiableOptions = Object.keys(priceNegotiableLabel) as PriceNegotiable[];
+
+/**
+ * A joint-venture listing's land value can be "to be determined": saved as price 0 with
+ * `landValueTbd`. A live JV listing with no land value counts as TBD too, so it never shows ₦0.
+ */
+export function isLandValueTbd(listing: { dealType: DealType; price: number; landValueTbd?: boolean; status?: string }): boolean {
+  return listing.dealType === "jv" && (Boolean(listing.landValueTbd) || (listing.price <= 0 && listing.status !== "draft"));
+}
+
+/** "₦150,000,000" (or "₦150M" when short), or "To be determined" ("TBD") for a JV land value that's TBD. */
+export function priceText(
+  listing: { dealType: DealType; price: number; landValueTbd?: boolean; status?: string; plotOptions?: PlotOption[] },
+  short = false,
+): string {
+  if (isLandValueTbd(listing)) return short ? "TBD" : "To be determined";
+  // Estates: the cheapest plot, as "From ₦12M".
+  if (isEstate(listing)) {
+    const cheapest = Math.min(...listing.plotOptions!.map((option) => option.price));
+    return `From ${short ? formatNairaShort(cheapest) : formatNaira(cheapest)}`;
+  }
+  return short ? formatNairaShort(listing.price) : formatNaira(listing.price);
+}
+
+// ── Estates: listings with several plot sizes ───────────────────────────────
+
+/** A plot row while it's being typed: numbers stay as digits. */
+export interface PlotRow {
+  sizeSqm: string;
+  price: string;
+  priceNegotiable: "" | PriceNegotiable;
+  deposit: string;
+}
+
+export const emptyPlotRow = (): PlotRow => ({ sizeSqm: "", price: "", priceNegotiable: "", deposit: "" });
+
+/** A listing's plot options as editable rows; two empty rows to start an estate. */
+export function plotRowsFrom(options?: PlotOption[]): PlotRow[] {
+  if (!options?.length) return [emptyPlotRow(), emptyPlotRow()];
+  return options.map((option) => ({
+    sizeSqm: String(option.sizeSqm),
+    price: String(option.price),
+    priceNegotiable: option.priceNegotiable ?? "",
+    deposit: option.deposit ? String(option.deposit) : "",
+  }));
+}
+
+const filled = (row: PlotRow) => Boolean(row.sizeSqm || row.price || row.deposit || row.priceNegotiable);
+
+/** The complete rows as plot options, cheapest first. Empty rows are ignored. */
+export function plotOptionsFrom(rows: PlotRow[]): PlotOption[] {
+  return rows
+    .filter((row) => Number(row.sizeSqm) > 0 && Number(row.price) > 0)
+    .map((row) => ({
+      sizeSqm: Number(row.sizeSqm),
+      price: Number(row.price),
+      priceNegotiable: row.priceNegotiable || undefined,
+      deposit: Number(row.deposit) > 0 ? Number(row.deposit) : undefined,
+    }))
+    .sort((a, b) => a.price - b.price || a.sizeSqm - b.sizeSqm);
+}
+
+/** What's wrong with the plot rows, if anything: each started row needs a size, a price and its negotiability. */
+export function plotRowsProblem(rows: PlotRow[]): string | undefined {
+  const started = rows.filter(filled);
+  if (!started.length) return "Add at least one plot size with its price.";
+  if (started.some((row) => !(Number(row.sizeSqm) > 0) || !(Number(row.price) > 0) || !row.priceNegotiable)) {
+    return "Each plot size needs a size, a price and whether the price is negotiable.";
+  }
+  return undefined;
+}
+
+/** True when the listing is an estate with more than one plot size. */
+export const isEstate = (listing: { plotOptions?: PlotOption[] }) => (listing.plotOptions?.length ?? 0) > 1;
+
+/** "750 sqm", or "200–1,000 sqm" for an estate. */
+export function sizeText(listing: { sizeSqm: number; plotOptions?: PlotOption[] }): string {
+  if (!isEstate(listing)) return formatSize(listing.sizeSqm);
+  const sizes = listing.plotOptions!.map((option) => option.sizeSqm);
+  return `${Math.min(...sizes).toLocaleString("en-NG")}–${formatSize(Math.max(...sizes))}`;
+}

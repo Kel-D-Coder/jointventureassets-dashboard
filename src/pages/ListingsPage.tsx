@@ -5,8 +5,8 @@ import { listings } from "@/lib/api";
 import { inboxEnquiries } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { DealTypePill, ListingStatusPill } from "@/components/StatusPills";
-import { listingStatusLabel, propertyTypeLabel } from "@/data/labels";
-import { formatNairaShort, formatSize } from "@/lib/format";
+import { listingStatusLabel, priceText, propertyTypeLabel } from "@/data/labels";
+import { formatSize } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, SkeletonRows, Tabs, inputClass } from "@/ui";
 import type { DealType, Listing, ListingStatus } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
@@ -144,7 +144,7 @@ function ListingCard({ listing, enquiries }: { listing: Listing; enquiries: numb
         <div className="mt-4 flex items-end justify-between gap-3 border-t border-fg/8 pt-4">
           <div>
             <p className="label text-muted">{listing.dealType === "jv" ? "Land value" : "Price"}</p>
-            <p className="mt-1 text-lg font-bold text-fg">{formatNairaShort(listing.price)}</p>
+            <p className="mt-1 text-lg font-bold text-fg">{priceText(listing, true)}</p>
           </div>
           <div className="text-right text-xs text-muted">
             <p>

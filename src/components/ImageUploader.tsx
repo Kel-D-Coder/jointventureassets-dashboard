@@ -1,13 +1,13 @@
 import { useRef, useState, type DragEvent } from "react";
-import { FaCloudArrowUp, FaStar, FaVideo, FaXmark } from "react-icons/fa6";
+import { FaCircleInfo, FaCloudArrowUp, FaStar, FaVideo, FaXmark } from "react-icons/fa6";
 import { resizeImage } from "@/lib/image";
 import { VIDEO_LIMITS, discardVideo, isVideoUrl, photosThenVideo, prepareVideo } from "@/lib/videoWatermark";
 import { cx } from "@/lib/format";
 
 /**
  * Drop zone + thumbnails for a listing's photos and its one optional video. The first photo
- * is the cover shown on cards; any photo can be promoted to cover or removed. Everything gets
- * the JVA watermark as it's added.
+ * is the cover shown on cards; any photo can be promoted to cover or removed. Photos get
+ * the JVA watermark as they're added; videos are uploaded as they are.
  */
 export function ImageUploader({
   images,
@@ -21,7 +21,7 @@ export function ImageUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
-  /** 0–1 while a video is being watermarked. */
+  /** 0–1 while a video is being checked. */
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [problem, setProblem] = useState("");
   const hasVideo = images.some(isVideoUrl);
@@ -93,12 +93,12 @@ export function ImageUploader({
       >
         <FaCloudArrowUp aria-hidden="true" className="mx-auto h-7 w-7 text-gold-deep" />
         <p className="mt-2 text-sm font-semibold text-fg">
-          {videoProgress !== null ? `Adding the watermark to your video… ${Math.round(videoProgress * 100)}%` : busy ? "Preparing photos…" : "Drag photos or a video here"}
+          {videoProgress !== null ? "Checking your video…" : busy ? "Preparing photos…" : "Drag photos or a video here"}
         </p>
         <p className="mt-1 text-xs text-muted">
           {videoProgress !== null
-            ? "Keep this tab open; it takes about as long as the video plays."
-            : `JPG or PNG photos, plus ${VIDEO_LIMITS}. Everything gets the JVA watermark.`}
+            ? "This only takes a moment."
+            : `JPG or PNG photos (they get the JVA watermark), plus ${VIDEO_LIMITS}.`}
         </p>
         {videoProgress !== null ? (
           <div className="mx-auto mt-3 h-1.5 max-w-xs overflow-hidden rounded-full bg-fg/10" role="progressbar" aria-valuenow={Math.round(videoProgress * 100)} aria-valuemin={0} aria-valuemax={100}>
@@ -115,6 +115,14 @@ export function ImageUploader({
         </button>
         <input ref={inputRef} type="file" accept="image/*,video/*" multiple hidden onChange={(event) => addFiles(event.target.files)} />
       </div>
+
+      {/* Videos are uploaded as recorded, so iPhone HEVC videos won't play everywhere. */}
+      <p className="flex gap-2 rounded-lg bg-gold-soft/40 px-3 py-2 text-xs text-fg">
+        <FaCircleInfo aria-hidden="true" className="mt-0.5 shrink-0 text-gold-deep" />
+        <span>
+          <strong className="font-semibold">Filming on an iPhone?</strong> Before recording, go to Settings → Camera → Formats and choose “Most Compatible”. Otherwise the video may not play in some browsers (Chrome on Windows, Firefox).
+        </span>
+      </p>
 
       {error ? <p className="text-xs font-medium text-danger">{error}</p> : null}
       {problem ? <p className="text-xs font-medium text-danger">{problem}</p> : null}

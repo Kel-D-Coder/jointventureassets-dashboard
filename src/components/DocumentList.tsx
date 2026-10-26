@@ -1,14 +1,6 @@
 import { FaArrowUpRightFromSquare, FaDownload, FaFilePdf } from "react-icons/fa6";
+import { downloadDocument, fileSize, openDocument } from "@/lib/documents";
 import type { SubmittedDocument } from "@/types";
-
-const fileSize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-
-/** Browsers block opening data: URLs in a new tab, so uploaded files are opened as blob URLs instead. */
-async function openDocument(doc: SubmittedDocument) {
-  const url = doc.url.startsWith("data:") ? URL.createObjectURL(await (await fetch(doc.url)).blob()) : doc.url;
-  window.open(url, "_blank", "noopener");
-}
 
 /** Uploaded documents with a preview (images) or PDF icon, and Open / Download for each. */
 export function DocumentList({ documents, labels }: { documents: SubmittedDocument[]; labels?: string[] }) {
@@ -35,9 +27,9 @@ export function DocumentList({ documents, labels }: { documents: SubmittedDocume
               <button type="button" onClick={() => void openDocument(doc)} className="inline-flex items-center gap-1 text-gold-deep hover:underline">
                 <FaArrowUpRightFromSquare aria-hidden="true" /> Open
               </button>
-              <a href={doc.url} download={doc.name} className="inline-flex items-center gap-1 text-muted hover:text-fg">
+              <button type="button" onClick={() => void downloadDocument(doc)} className="inline-flex items-center gap-1 text-muted hover:text-fg">
                 <FaDownload aria-hidden="true" /> Download
-              </a>
+              </button>
             </div>
           </div>
         </li>

@@ -58,6 +58,7 @@ export const housingProposals: Option[] = [
 ];
 export const titleDocuments: Option[] = [
   { value: "c_of_o", label: "C of O" },
+  { value: "global_c_of_o", label: "Global C of O" },
   { value: "governors_consent", label: "Governor's Consent" },
   { value: "deed_of_assignment", label: "Deed of Assignment" },
   { value: "excision", label: "Excision" },

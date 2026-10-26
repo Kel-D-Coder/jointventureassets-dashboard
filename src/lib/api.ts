@@ -10,7 +10,7 @@
  */
 import { demoEnquiries, demoMessages, demoSend } from "@/lib/demoApi";
 import { readStored, removeStored } from "@/lib/storage";
-import { joinMedia, splitMedia } from "@/lib/videoWatermark";
+import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
 import type {
   AdminSession,
   ContactMessage,
@@ -130,7 +130,7 @@ export async function uploadIfNeeded(url: string, name: string): Promise<string>
   // data: URLs are photos from the editor; blob: URLs are prepared videos (see videoWatermark.ts).
   if (!url.startsWith("data:") && !url.startsWith("blob:")) return url;
   const blob = await (await fetch(url)).blob();
-  const extension = blob.type.split(";")[0]!.split("/")[1] || "bin";
+  const extension = fileExtension(blob.type);
   const form = new FormData();
   form.append("file", new File([blob], name.includes(".") ? name : `${name}.${extension}`, { type: blob.type }));
   const body = await call<{ url: string }>("/upload", { method: "POST", body: form });

@@ -11,7 +11,7 @@ import { formatDateTime, formatNaira, formatSize, negotiableText, premiumText } 
 import { BackLink, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 import type { DealClosing, Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
-import { sharingFormulaLabel } from "@/data/labels";
+import { isLandValueTbd, sharingFormulaLabel, SHARING_TBD } from "@/data/labels";
 
 type ClosedListing = Listing & { closing: DealClosing };
 
@@ -64,7 +64,7 @@ function DealDetail({ deal }: { deal: ClosedListing }) {
   const days = daysToClose(deal);
   const facts: Array<[string, string]> = [
     [deal.dealType === "jv" ? "Agreed land value" : "Final sale price", formatNaira(closing.finalAmount)],
-    [deal.dealType === "jv" ? "Listed land value" : "Asking price", deal.price ? formatNaira(deal.price) : "Not set"],
+    [deal.dealType === "jv" ? "Listed land value" : "Asking price", isLandValueTbd(deal) ? "To be determined" : deal.price ? formatNaira(deal.price) : "Not set"],
     ["Facilitation fee", closing.facilitationFee ? formatNaira(closing.facilitationFee) : "None recorded"],
     ["Size", formatSize(deal.sizeSqm)],
     ["Title document", deal.titleDocument],
@@ -72,7 +72,12 @@ function DealDetail({ deal }: { deal: ClosedListing }) {
   ];
   if (deal.jv) {
     facts.push(
-      ["Sharing formula", `${sharingFormulaLabel(deal.jv.sharingFormula)} (${negotiableText(deal.jv.sharingNegotiable).toLowerCase()})`],
+      [
+        "Sharing formula",
+        deal.jv.sharingFormula === SHARING_TBD
+          ? sharingFormulaLabel(deal.jv.sharingFormula)
+          : `${sharingFormulaLabel(deal.jv.sharingFormula)} (${negotiableText(deal.jv.sharingNegotiable).toLowerCase()})`,
+      ],
       ["Premium", premiumText(deal.jv.premium)],
       ["Build period", deal.jv.duration || "Not given"],
       ["What can be built", deal.jv.proposal || "Open to proposals"],

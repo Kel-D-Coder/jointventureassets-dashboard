@@ -1,5 +1,6 @@
 import { formatSize } from "@/lib/format";
 import type { Listing } from "@/types";
+import { isLandValueTbd } from "@/data/labels";
 
 /**
  * Document templates. Text uses {{key}} placeholders, each filled from a
@@ -158,7 +159,7 @@ export const documentTemplates: DocumentTemplate[] = [
       { key: "landSize", label: "Land size (sqm)", group: "Property", fromListing: (l) => l.sizeSqm.toLocaleString("en-NG") },
       { key: "titleDocument", label: "Title document", group: "Property", fromListing: (l) => l.titleDocument },
       { key: "surveyNumber", label: "Survey plan number", group: "Property", optional: true },
-      { key: "landValue", label: "Land value (₦)", group: "Property", hint: "Numbers only; ₦ is added", fromListing: (l) => l.price.toLocaleString("en-NG") },
+      { key: "landValue", label: "Land value (₦)", group: "Property", hint: "Numbers only; ₦ is added", fromListing: (l) => (isLandValueTbd(l) ? "" : l.price.toLocaleString("en-NG")) },
       { key: "propertyDescription", label: "Property description", group: "Property", kind: "textarea", fromListing: (l) => l.description },
 
       { key: "projectType", label: "Project type", group: "Proposed development", hint: "Residential, Commercial or Mixed-use" },

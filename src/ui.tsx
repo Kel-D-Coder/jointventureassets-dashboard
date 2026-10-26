@@ -259,9 +259,26 @@ export function Table({ head, children, minWidth = "min-w-3xl" }: { head: ReactN
 }
 
 /** A whole number (an amount, a size): shows commas as you type (1,000,000) and hands back digits only. */
-export function NumberInput({ value, onChange }: { value: string; onChange: (digits: string) => void }) {
+export function NumberInput({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}: {
+  value: string;
+  onChange: (digits: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
   return (
-    <input inputMode="numeric" value={withCommas(value)} onChange={(event) => onChange(event.target.value.replace(/[^\d]/g, ""))} className={inputClass} />
+    <input
+      inputMode="numeric"
+      value={withCommas(value)}
+      onChange={(event) => onChange(event.target.value.replace(/[^\d]/g, ""))}
+      disabled={disabled}
+      placeholder={placeholder}
+      className={inputClass}
+    />
   );
 }
 

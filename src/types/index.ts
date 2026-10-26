@@ -49,6 +49,13 @@ export interface Listing {
   status: ListingStatus;
   /** Sale listings: whether the asking price is negotiable. Missing on older listings. */
   priceNegotiable?: PriceNegotiable;
+  /** Joint ventures: the land value is still to be determined (price is then 0). */
+  landValueTbd?: boolean;
+  /**
+   * Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the
+   * cheapest plot. TODO(backend): not sent to or read from the server yet.
+   */
+  plotOptions?: PlotOption[];
   featured: boolean;
   verified: boolean;
   views: number;
@@ -152,3 +159,16 @@ export type {
 
 /** Sale listings: how much room there is on the asking price. */
 export type PriceNegotiable = "negotiable" | "slightly_negotiable" | "fixed";
+
+/**
+ * One plot size in an estate listing (a sale listing with several plot sizes): its size, price,
+ * how negotiable that price is, and the optional initial deposit.
+ */
+export interface PlotOption {
+  sizeSqm: number;
+  /** Naira. */
+  price: number;
+  priceNegotiable?: PriceNegotiable;
+  /** Initial deposit to secure the plot, in naira; optional. */
+  deposit?: number;
+}

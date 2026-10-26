@@ -1,6 +1,6 @@
 import type { ListingInput } from "@/lib/api";
 import { isVideoUrl } from "@/lib/videoWatermark";
-import { splitTitles } from "@/data/labels";
+import { splitTitles, SHARING_TBD } from "@/data/labels";
 
 /** The company, used as a listing's owner unless another owner is entered. */
 export const COMPANY_OWNER = "Joint Venture Assets";
@@ -15,6 +15,7 @@ export type CheckedField =
   | "ownerName"
   | "images"
   | "titleDocument"
+  | "plotOptions"
   | "proposal"
   | "sharingNegotiable"
   | "premium"
@@ -38,7 +39,7 @@ const checks: Check[] = [
   { field: "images", label: "Photos", message: "Upload at least one photo.", passes: (l) => l.images.some((url) => !isVideoUrl(url)) },
   { field: "titleDocument", label: "Title documents", message: "Pick at least one title document.", passes: (l) => splitTitles(l.titleDocument).length > 0 },
   { field: "sizeSqm", label: "Size", message: "Enter the size in square metres.", passes: (l) => l.sizeSqm > 0 },
-  { field: "price", label: "Price", message: "Enter an amount in naira.", passes: (l) => l.price > 0 },
+  { field: "price", label: "Price", message: "Enter an amount in naira, or tick TBD for a joint venture.", passes: (l) => l.price > 0 || (l.dealType === "jv" && Boolean(l.landValueTbd)) },
   { field: "area", label: "Area", message: "Add the area.", passes: (l) => Boolean(l.area.trim()) },
   { field: "city", label: "City", message: "Add the city.", passes: (l) => Boolean(l.city.trim()) },
   { field: "description", label: "Description", message: "Describe the property.", passes: (l) => Boolean(l.description.trim()) },
@@ -47,7 +48,7 @@ const checks: Check[] = [
     field: "sharingNegotiable",
     label: "Negotiable?",
     message: "Say whether the sharing formula is negotiable.",
-    passes: (l) => l.dealType !== "jv" || l.jv?.sharingNegotiable !== undefined,
+    passes: (l) => l.dealType !== "jv" || l.jv?.sharingFormula === SHARING_TBD || l.jv?.sharingNegotiable !== undefined,
   },
   {
     field: "premium",

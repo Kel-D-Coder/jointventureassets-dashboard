@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { FaArrowLeft, FaArrowUpRightFromSquare, FaFloppyDisk, FaTrashCan } from "react-icons/fa6";
+import { FaArrowLeft, FaArrowUpRightFromSquare, FaFloppyDisk, FaPhone, FaTrashCan } from "react-icons/fa6";
 import { listings, type ListingInput } from "@/lib/api";
 import { useAction } from "@/hooks/useResource";
 import { cx } from "@/lib/format";
@@ -8,7 +8,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 import { DealClosingFields } from "@/components/DealClosingFields";
 import { closingDraft, closingErrors, toClosing, type ClosingDraft, type ClosingErrors } from "@/lib/closing";
 import { COMPANY_OWNER, missingFor, type CheckedField } from "@/lib/listingChecks";
-import { listingStatusLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulaOptions } from "@/data/labels";
+import { listingStatusLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulaOptions, SHARING_TBD } from "@/data/labels";
 import { websiteUrl } from "@/data/site";
 import { Button, Card, CardTitle, Field, MoneyInput, Notice, NumberInput, PageHeader, SkeletonRows, Tabs, YesNo, inputClass, type YesNoValue } from "@/ui";
 import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType, PriceNegotiable, SubmittedDocument } from "@/types";
@@ -16,6 +16,9 @@ import { joinMedia, splitMedia } from "@/lib/videoWatermark";
 import { TitleDocumentPicker } from "@/components/TitleDocumentPicker";
 import { SupportingDocuments } from "@/components/SupportingDocuments";
 import { OwnerPicker } from "@/components/OwnerPicker";
+import { isLandValueTbd } from "@/data/labels";
+import { PlotOptionsEditor } from "@/components/PlotOptionsEditor";
+import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem, type PlotRow } from "@/data/labels";
 
 /** Form values — numbers stay as strings while they're being typed. */
 interface Draft {
@@ -27,6 +30,11 @@ interface Draft {
   state: string;
   sizeSqm: string;
   price: string;
+  /** Joint ventures: land value to be determined. */
+  landValueTbd: boolean;
+  /** Sale listings: an estate with several plot sizes, each with its own price (plotRows). */
+  isEstate: boolean;
+  plotRows: PlotRow[];
   titleDocument: string;
   description: string;
   highlights: string;
@@ -46,6 +54,11 @@ interface Draft {
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
+  /**
+   * Listed under Joint Venture Assets: the actual owner's phone number, so the team can call them.
+   * Optional. TODO(backend): not sent to the server yet; it's lost on save until the server stores it.
+   */
+  companyOwnerPhone: string;
   /** Set when the owner was picked from the platform's members. */
   userId?: string;
   status: ListingStatus;
@@ -68,6 +81,9 @@ const emptyDraft: Draft = {
   state: "Lagos",
   sizeSqm: "",
   price: "",
+  landValueTbd: false,
+  isEstate: false,
+  plotRows: plotRowsFrom(),
   titleDocument: "C of O",
   description: "",
   highlights: "",
@@ -83,6 +99,7 @@ const emptyDraft: Draft = {
   ownerName: "",
   ownerEmail: "",
   ownerPhone: "",
+  companyOwnerPhone: "",
   status: "draft",
   closing: closingDraft(),
   featured: false,
@@ -112,6 +129,9 @@ function draftFromListing(listing: Listing): Draft {
     state: listing.state,
     sizeSqm: listing.sizeSqm ? String(listing.sizeSqm) : "",
     price: listing.price ? String(listing.price) : "",
+    landValueTbd: isLandValueTbd(listing),
+    isEstate: isEstate(listing),
+    plotRows: plotRowsFrom(listing.plotOptions),
     titleDocument: listing.titleDocument,
     description: listing.description,
     highlights: listing.highlights.join("\n"),
@@ -126,6 +146,8 @@ function draftFromListing(listing: Listing): Draft {
     ownerEmail: listing.ownerEmail ?? "",
     ownerPhone: listing.ownerPhone ?? "",
     userId: listing.userId,
+    // TODO(backend): read the owner's phone back once the server stores it.
+    companyOwnerPhone: "",
     status: listing.status,
     closing: closingDraft(listing.closing, listing.price),
     featured: listing.featured,
@@ -148,6 +170,9 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     state: listing.state,
     sizeSqm: listing.sizeSqm ? String(listing.sizeSqm) : "",
     price: listing.price ? String(listing.price) : "",
+    landValueTbd: Boolean(listing.landValueTbd),
+    isEstate: isEstate(listing),
+    plotRows: plotRowsFrom(listing.plotOptions),
     titleDocument: listing.titleDocument,
     description: listing.description,
     highlights: listing.highlights.join("\n"),
@@ -190,6 +215,9 @@ function draftFromRequest(request: PartnerRequest): Draft {
 }
 
 function toInput(draft: Draft, status: ListingStatus): ListingInput {
+  const estate = draft.dealType === "sale" && draft.isEstate;
+  // Cheapest first. TODO(backend): send the whole list as `plotOptions` once the server stores it.
+  const cheapest = estate ? plotOptionsFrom(draft.plotRows)[0] : undefined;
   return {
     title: draft.title.trim(),
     dealType: draft.dealType,
@@ -197,8 +225,9 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     area: draft.area.trim(),
     city: draft.city.trim(),
     state: draft.state.trim(),
-    sizeSqm: Number(draft.sizeSqm) || 0,
-    price: Number(draft.price) || 0,
+    sizeSqm: cheapest ? cheapest.sizeSqm : Number(draft.sizeSqm) || 0,
+    price: cheapest ? cheapest.price : draft.dealType === "jv" && draft.landValueTbd ? 0 : Number(draft.price) || 0,
+    landValueTbd: draft.dealType === "jv" && draft.landValueTbd ? true : undefined,
     titleDocument: draft.titleDocument,
     description: draft.description.trim(),
     highlights: draft.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
@@ -208,7 +237,8 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
       draft.dealType === "jv"
         ? {
             sharingFormula: draft.sharingFormula,
-            sharingNegotiable: draft.sharingNegotiable ? draft.sharingNegotiable === "yes" : undefined,
+            // "To be discussed" has no ratio to negotiate yet.
+            sharingNegotiable: draft.sharingFormula !== SHARING_TBD && draft.sharingNegotiable ? draft.sharingNegotiable === "yes" : undefined,
             // "Yes" without an amount stays unanswered, so publishing asks for the amount.
             premium: draft.hasPremium === "no" ? 0 : draft.hasPremium === "yes" && Number(draft.premium) > 0 ? Number(draft.premium) : undefined,
             proposal: draft.proposal.trim(),
@@ -223,7 +253,7 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
     verified: draft.verified,
-    priceNegotiable: draft.dealType === "sale" && draft.priceNegotiable ? draft.priceNegotiable : undefined,
+    priceNegotiable: cheapest ? cheapest.priceNegotiable : draft.dealType === "sale" && draft.priceNegotiable ? draft.priceNegotiable : undefined,
     sourceSubmissionId: draft.sourceSubmissionId,
   };
 }
@@ -333,7 +363,10 @@ export default function ListingEditorPage() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const status = isDraft ? "published" : draft.status;
-    const missing = missingFor(toInput(draft, status));
+    const estate = draft.dealType === "sale" && draft.isEstate;
+    const plotProblem = estate ? plotRowsProblem(draft.plotRows) : undefined;
+    const missing = missingFor(toInput(draft, status)).filter((check) => !(estate && ["sizeSqm", "price", "priceNegotiable"].includes(check.field)));
+    if (plotProblem) missing.push({ field: "plotOptions", label: "Plot sizes", message: plotProblem, passes: () => false });
     const closingProblemsNow = status === "closed" ? closingErrors(draft.closing) : {};
     setClosingProblems(closingProblemsNow);
     setErrors(Object.fromEntries(missing.map((check) => [check.field, check.message])));
@@ -444,14 +477,42 @@ export default function ListingEditorPage() {
               <div className="sm:col-span-2">
                 <TitleDocumentPicker value={draft.titleDocument} onChange={(value) => set("titleDocument", value)} error={errors.titleDocument} />
               </div>
+              {draft.dealType === "sale" ? (
+                <label className="flex items-center gap-2.5 rounded-lg border border-fg/15 px-3 py-2.5 text-sm text-fg sm:col-span-2 has-checked:border-gold has-checked:bg-gold-soft/40">
+                  <input type="checkbox" checked={draft.isEstate} onChange={(e) => set("isEstate", e.target.checked)} className="h-4 w-4 accent-[#c9a24a]" />
+                  <span>
+                    <span className="font-semibold">This is an estate with several plot sizes</span>
+                    <span className="block text-xs text-muted">Each plot size gets its own price, negotiable option and initial deposit.</span>
+                  </span>
+                </label>
+              ) : null}
+              {draft.dealType === "sale" && draft.isEstate ? (
+                <div className="sm:col-span-2">
+                  <PlotOptionsEditor rows={draft.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} />
+                </div>
+              ) : (
+                <>
               <Field label="Size (sqm)" error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
                 <NumberInput value={draft.sizeSqm} onChange={(digits) => set("sizeSqm", digits)} />
               </Field>
               <Field label={draft.dealType === "jv" ? "Land value (₦)" : "Asking price (₦)"} error={errors.price}>
-                <MoneyInput value={draft.price} onChange={(digits) => set("price", digits)} />
+                <MoneyInput value={draft.price} onChange={(digits) => set("price", digits)} disabled={draft.dealType === "jv" && draft.landValueTbd} placeholder={draft.dealType === "jv" && draft.landValueTbd ? "To be determined" : undefined} />
               </Field>
+              {draft.dealType === "jv" ? (
+                <label className="-mt-2 flex items-center gap-2 text-sm text-fg sm:col-start-2">
+                  <input
+                    type="checkbox"
+                    checked={draft.landValueTbd}
+                    onChange={(e) => setDraft((current) => ({ ...current, landValueTbd: e.target.checked, price: e.target.checked ? "" : current.price }))}
+                    className="h-4 w-4 accent-[#c9a24a]"
+                  />
+                  Land value TBD (to be determined)
+                </label>
+              ) : null}
+                </>
+              )}
             </div>
-            {draft.dealType === "sale" ? (
+            {draft.dealType === "sale" && !draft.isEstate ? (
               <fieldset className="mt-5">
                 <legend className="mb-1.5 block text-[0.8125rem] font-medium text-fg">Is the price negotiable?</legend>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -490,15 +551,17 @@ export default function ListingEditorPage() {
                     ))}
                   </select>
                 </Field>
-                <YesNo
-                  name="sharingNegotiable"
-                  legend="Is the sharing formula negotiable?"
-                  value={draft.sharingNegotiable}
-                  onChange={(value) => set("sharingNegotiable", value)}
-                  yes="Negotiable"
-                  no="Fixed"
-                  error={errors.sharingNegotiable}
-                />
+                {draft.sharingFormula !== SHARING_TBD ? (
+                  <YesNo
+                    name="sharingNegotiable"
+                    legend="Is the sharing formula negotiable?"
+                    value={draft.sharingNegotiable}
+                    onChange={(value) => set("sharingNegotiable", value)}
+                    yes="Negotiable"
+                    no="Fixed"
+                    error={errors.sharingNegotiable}
+                  />
+                ) : null}
                 <YesNo
                   name="hasPremium"
                   legend="Is there a premium?"
@@ -571,6 +634,22 @@ export default function ListingEditorPage() {
                     A different owner
                   </label>
                 </div>
+                {draft.ownerMode === "company" ? (
+                  <Field label="Owner's phone number (optional)" hint="For the JVA team only, so you can call the owner about this listing." className="mt-3">
+                    <input
+                      type="tel"
+                      value={draft.companyOwnerPhone}
+                      onChange={(e) => set("companyOwnerPhone", e.target.value)}
+                      placeholder="e.g. 0803 123 4567"
+                      className={inputClass}
+                    />
+                  </Field>
+                ) : null}
+                {draft.ownerMode === "company" && draft.companyOwnerPhone.trim() ? (
+                  <a href={`tel:${draft.companyOwnerPhone.replace(/[^\d+]/g, "")}`} className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-deep hover:underline">
+                    <FaPhone aria-hidden="true" className="h-3 w-3" /> Call {draft.companyOwnerPhone.trim()}
+                  </a>
+                ) : null}
                 {draft.ownerMode === "other" ? (
                   <OwnerPicker
                     value={{ userId: draft.userId, name: draft.ownerName, email: draft.ownerEmail, phone: draft.ownerPhone }}

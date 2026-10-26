@@ -76,7 +76,7 @@ export default function ListingRequestsPage() {
                     <span className="min-w-0">
                       <span className={cx("block max-w-xs truncate text-fg hover:underline", submission.status === "pending" ? "font-bold" : "font-medium")}>{listing.title}</span>
                       <span className="block truncate text-xs text-muted">
-                        {listing.area}, {listing.city} · {formatNairaShort(listing.price)}
+                        {listing.area}, {listing.city} · {listing.landValueTbd ? "Land value TBD" : formatNairaShort(listing.price)}
                       </span>
                     </span>
                   </Link>

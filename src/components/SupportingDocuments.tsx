@@ -1,12 +1,10 @@
 import { useRef, useState, type DragEvent } from "react";
-import { FaCloudArrowUp, FaFileImage, FaFilePdf, FaXmark } from "react-icons/fa6";
+import { FaArrowUpRightFromSquare, FaCloudArrowUp, FaDownload, FaFilePdf, FaXmark } from "react-icons/fa6";
 import { documentsToUpload, listInWords } from "@/data/labels";
 import { MAX_DOCUMENT_MB, toDocument } from "@/lib/files";
 import { cx } from "@/lib/format";
+import { downloadDocument, fileSize, openDocument } from "@/lib/documents";
 import type { SubmittedDocument } from "@/types";
-
-const fileSize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 /**
  * Copies of the property's title documents (C of O, deed, survey…), so the JVA team can verify
@@ -81,18 +79,34 @@ export function SupportingDocuments({
         <ul className="divide-y divide-fg/8 rounded-lg border border-fg/10">
           {documents.map((doc, index) => (
             <li key={doc.name + index} className="flex items-center gap-3 px-3 py-2.5 text-sm">
-              {doc.type === "application/pdf" ? (
-                <FaFilePdf aria-hidden="true" className="shrink-0 text-danger" />
+              {doc.type.startsWith("image/") ? (
+                <button type="button" onClick={() => void openDocument(doc)} aria-label={`Open ${doc.name}`} className="shrink-0">
+                  <img src={doc.url} alt="" className="h-11 w-11 rounded-md object-cover ring-1 ring-fg/10" />
+                </button>
               ) : (
-                <FaFileImage aria-hidden="true" className="shrink-0 text-muted" />
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-danger/8 text-lg text-danger">
+                  <FaFilePdf aria-hidden="true" />
+                </span>
               )}
-              <span className="min-w-0 flex-1 truncate">{doc.name}</span>
-              <span className="shrink-0 text-xs text-muted">{fileSize(doc.size)}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-fg">{doc.name}</p>
+                <p className="text-xs text-muted">
+                  {doc.type === "application/pdf" ? "PDF" : "Image"} · {fileSize(doc.size)}
+                </p>
+                <div className="mt-1 flex gap-3 text-xs font-semibold">
+                  <button type="button" onClick={() => void openDocument(doc)} className="inline-flex items-center gap-1 text-gold-deep hover:underline">
+                    <FaArrowUpRightFromSquare aria-hidden="true" /> Open
+                  </button>
+                  <button type="button" onClick={() => void downloadDocument(doc)} className="inline-flex items-center gap-1 text-muted hover:text-fg">
+                    <FaDownload aria-hidden="true" /> Download
+                  </button>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => onChange(documents.filter((_, i) => i !== index))}
                 aria-label={`Remove ${doc.name}`}
-                className="grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-danger/10 hover:text-danger"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted hover:bg-danger/10 hover:text-danger"
               >
                 <FaXmark aria-hidden="true" />
               </button>

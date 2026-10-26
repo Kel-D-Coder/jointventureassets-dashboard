@@ -2,7 +2,7 @@
  * Records shared with the website through its demo inbox (/api/demo-inbox).
  * The website keeps the original in lib/inbox/types.ts; change both together.
  */
-import type { DealType, PropertyType } from "@/types";
+import type { DealType, PlotOption, PropertyType } from "@/types";
 
 export type EnquiryStatus = "new" | "contacted" | "closed";
 
@@ -75,6 +75,13 @@ export interface SubmittedListing {
   saleTerms?: { acceptedFeeTerms: true; feeRate: number };
   /** Sale listings: whether the asking price is negotiable. */
   priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
+  /** Joint ventures: the land value is still to be determined (price is then 0). */
+  landValueTbd?: boolean;
+  /**
+   * Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the
+   * cheapest plot. TODO(backend): not sent to or read from the server yet.
+   */
+  plotOptions?: PlotOption[];
 }
 
 /** A visitor asking for their property to be listed. Reviewed in the dashboard's "Listing requests". */

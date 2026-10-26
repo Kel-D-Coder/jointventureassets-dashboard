@@ -7,7 +7,7 @@ import { PersonLink } from "@/components/PersonLink";
 import { listingSubmissions } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { DealTypePill } from "@/components/StatusPills";
-import { priceNegotiableLabel, propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone } from "@/data/labels";
+import { isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone, SHARING_TBD } from "@/data/labels";
 import { cx, formatDateTime, formatNaira, formatSize, negotiableText, premiumText } from "@/lib/format";
 import { BackLink, Button, Card, CardTitle, DeleteButton, Field, Notice, PageHeader, Pill, SkeletonRows, inputClass } from "@/ui";
 import type { ListingSubmission, SubmittedDocument } from "@/types";
@@ -148,14 +148,14 @@ function SubmissionDetail({
         ) : null}
 
         <dl className="mt-6 grid gap-5 border-t border-fg/8 pt-5 sm:grid-cols-4">
-          <Fact label={listing.dealType === "jv" ? "Land value" : "Asking price"}>{formatNaira(listing.price)}</Fact>
+          <Fact label={listing.dealType === "jv" ? "Land value" : "Asking price"}>{listing.landValueTbd ? "To be determined" : priceText(listing)}</Fact>
           <Fact label="Size">{formatSize(listing.sizeSqm)}</Fact>
           <Fact label="Type">{propertyTypeLabel[listing.propertyType]}</Fact>
           <Fact label="Title document">{listing.titleDocument}</Fact>
           {listing.jv ? (
             <>
               <Fact label="Sharing formula">{listing.jv.sharingFormula}</Fact>
-              <Fact label="Sharing negotiable">{negotiableText(listing.jv.sharingNegotiable)}</Fact>
+              {listing.jv.sharingFormula !== SHARING_TBD ? <Fact label="Sharing negotiable">{negotiableText(listing.jv.sharingNegotiable)}</Fact> : null}
               <Fact label="Premium">{premiumText(listing.jv.premium)}</Fact>
               <Fact label="Build period">{listing.jv.duration || "Not given"}</Fact>
               <div className="sm:col-span-2">
@@ -176,6 +176,35 @@ function SubmissionDetail({
             </div>
           ) : null}
         </dl>
+
+        {isEstate(listing) ? (
+          // TODO(backend): plotOptions only arrive once the server stores them.
+          <div className="mt-5">
+            <p className="label mb-2 text-muted">Plot sizes &amp; prices</p>
+            <div className="overflow-x-auto rounded-lg border border-fg/10">
+              <table className="w-full min-w-md text-left text-sm">
+                <thead className="bg-surface/70 text-xs text-muted">
+                  <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:font-semibold">
+                    <th>Plot size</th>
+                    <th>Price</th>
+                    <th>Negotiable</th>
+                    <th>Initial deposit</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-fg/8 [&_td]:px-3 [&_td]:py-2">
+                  {listing.plotOptions!.map((option, index) => (
+                    <tr key={index}>
+                      <td className="font-semibold text-fg">{formatSize(option.sizeSqm)}</td>
+                      <td className="tabular-nums">{formatNaira(option.price)}</td>
+                      <td>{option.priceNegotiable ? priceNegotiableLabel[option.priceNegotiable] : "Not stated"}</td>
+                      <td className="tabular-nums">{option.deposit ? formatNaira(option.deposit) : "None"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
 
         <p className="mt-6 text-sm leading-relaxed whitespace-pre-line text-fg">{listing.description}</p>
         {listing.highlights.length ? (
@@ -313,7 +342,7 @@ function loiPrefill(submission: ListingSubmission) {
       propertyLocation: locationOf(listing),
       landSize: listing.sizeSqm.toLocaleString("en-NG"),
       titleDocument: listing.titleDocument,
-      landValue: listing.price.toLocaleString("en-NG"),
+      landValue: listing.landValueTbd ? "" : listing.price.toLocaleString("en-NG"),
       propertyDescription: listing.description,
       projectDescription: listing.jv?.proposal ?? "",
       developmentPeriod: listing.jv?.duration ?? "",

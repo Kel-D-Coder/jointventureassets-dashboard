@@ -11,8 +11,8 @@ import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";
 import { websiteUrl } from "@/data/site";
 import { documentTemplates } from "@/data/templates";
-import { sharingFormulaLabel, enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
-import { formatDateTime, formatNairaShort } from "@/lib/format";
+import { priceText, sharingFormulaLabel, enquiryStatusLabel, enquiryStatusTone } from "@/data/labels";
+import { formatDateTime } from "@/lib/format";
 import { BackLink, Button, Card, CardTitle, DeleteButton, Notice, PageHeader, Pill, SkeletonRows } from "@/ui";
 import type { EnquiryStatus, InboxEnquiry, Listing, PartnerRequest } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
@@ -154,7 +154,7 @@ function SubjectCard({ enquiry, listing, request }: { enquiry: InboxEnquiry; lis
           <p className="mt-2 text-lg font-semibold text-fg">{target.title}</p>
           <p className="text-sm text-muted">
             {listing
-              ? `${listing.area}, ${listing.city} · ${formatNairaShort(listing.price)}${listing.jv ? ` · ${sharingFormulaLabel(listing.jv.sharingFormula)} sharing` : ""}`
+              ? `${listing.area}, ${listing.city} · ${priceText(listing, true)}${listing.jv ? ` · ${sharingFormulaLabel(listing.jv.sharingFormula)} sharing` : ""}`
               : (target.subtitle ?? "")}
           </p>
           {request ? (
