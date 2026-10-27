@@ -182,3 +182,19 @@ export function sizeText(listing: { sizeSqm: number; plotOptions?: PlotOption[] 
   const sizes = listing.plotOptions!.map((option) => option.sizeSqm);
   return `${Math.min(...sizes).toLocaleString("en-NG")}–${formatSize(Math.max(...sizes))}`;
 }
+
+/** A listing's `plotOptions` as the server sent them: numbers checked, incomplete rows dropped, cheapest first. */
+export function readPlotOptions(raw: unknown): PlotOption[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const options = raw
+    .map((item) => (item ?? {}) as Record<string, unknown>)
+    .map((item) => ({
+      sizeSqm: Number(item.sizeSqm) || 0,
+      price: Number(item.price) || 0,
+      priceNegotiable: priceNegotiableOptions.find((option) => option === item.priceNegotiable),
+      deposit: Number(item.deposit) > 0 ? Number(item.deposit) : undefined,
+    }))
+    .filter((option) => option.sizeSqm > 0 && option.price > 0)
+    .sort((a, b) => a.price - b.price || a.sizeSqm - b.sizeSqm);
+  return options.length ? options : undefined;
+}

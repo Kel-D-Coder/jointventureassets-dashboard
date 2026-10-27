@@ -51,11 +51,10 @@ export interface Listing {
   priceNegotiable?: PriceNegotiable;
   /** Joint ventures: the land value is still to be determined (price is then 0). */
   landValueTbd?: boolean;
-  /**
-   * Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the
-   * cheapest plot. TODO(backend): not sent to or read from the server yet.
-   */
+  /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
+  /** Estates: the plots sold so far. TODO(backend): not sent to or read from the server yet. */
+  sales?: PlotSale[];
   featured: boolean;
   verified: boolean;
   views: number;
@@ -171,4 +170,15 @@ export interface PlotOption {
   priceNegotiable?: PriceNegotiable;
   /** Initial deposit to secure the plot, in naira; optional. */
   deposit?: number;
+}
+
+/**
+ * One plot sold from an estate: the usual closing record plus the plot size. An estate stays live
+ * while its plots sell; each sale shows on the Closed deals page.
+ */
+export interface PlotSale extends DealClosing {
+  id: string;
+  plotSizeSqm: number;
+  /** The buyer's member account, when they were picked from the platform's members. */
+  buyerUserId?: string;
 }

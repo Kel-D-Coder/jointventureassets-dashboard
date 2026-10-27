@@ -5,27 +5,40 @@ import { listings } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";
-import { cx, formatDate, formatNairaShort } from "@/lib/format";
+import { cx, formatDate, formatNairaShort, formatSize } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, RowLink, SkeletonRows, StatCard, Table, Tabs, inputClass } from "@/ui";
 import type { DealClosing, DealType, Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
 
 type ClosedListing = Listing & { closing: DealClosing };
+/** A row on this page: a closed listing, or one plot sold from an estate (which stays live). */
+type DealRow = ClosedListing & { rowKey: string; link: string };
 type TypeFilter = DealType | "all";
 
 const DAY = 24 * 60 * 60 * 1000;
 const timeFormat = new Intl.DateTimeFormat("en-NG", { hour: "numeric", minute: "2-digit" });
 const formatTime = (iso: string) => timeFormat.format(new Date(iso));
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
-const daysToClose = (deal: ClosedListing) => Math.max(0, Math.round((Date.parse(deal.closing.closedAt) - Date.parse(deal.createdAt)) / DAY));
+const daysToClose = (deal: DealRow) => Math.max(0, Math.round((Date.parse(deal.closing.closedAt) - Date.parse(deal.createdAt)) / DAY));
 
 /** Closed listings that have their closing recorded, newest first. Older closed listings without a record are counted separately. */
 async function loadDeals() {
   const all = await listings.list();
   const closed = all.filter((listing) => listing.status === "closed");
-  const deals = closed
+  const closedDeals: DealRow[] = closed
     .filter((listing): listing is ClosedListing => Boolean(listing.closing))
-    .sort((a, b) => b.closing.closedAt.localeCompare(a.closing.closedAt));
+    .map((listing) => ({ ...listing, rowKey: listing.id, link: `/closed-deals/${listing.id}` }));
+  // Estates: each plot sold is its own deal; the row opens the estate, which may still be live.
+  const plotSales: DealRow[] = all.flatMap((listing) =>
+    (listing.sales ?? []).map((sale) => ({
+      ...listing,
+      title: `${listing.title}: ${formatSize(sale.plotSizeSqm)} plot`,
+      closing: sale,
+      rowKey: `${listing.id}-${sale.id}`,
+      link: `/listings/${listing.id}`,
+    })),
+  );
+  const deals = [...closedDeals, ...plotSales].sort((a, b) => b.closing.closedAt.localeCompare(a.closing.closedAt));
   return {
     deals,
     unrecorded: closed.filter((listing) => !listing.closing),
@@ -144,9 +157,9 @@ export default function ClosedDealsPage() {
           }
         >
           {visible.map((deal) => (
-            <RowLink key={deal.id} to={`/closed-deals/${deal.id}`}>
+            <RowLink key={deal.rowKey} to={deal.link}>
               <td>
-                <Link to={`/closed-deals/${deal.id}`} className="flex items-center gap-3">
+                <Link to={deal.link} className="flex items-center gap-3">
                   {coverOf(deal.images) ? (
                     <img src={coverOf(deal.images)} alt="" className="h-10 w-12 shrink-0 rounded-md object-cover" />
                   ) : (

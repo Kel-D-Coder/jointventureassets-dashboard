@@ -12,11 +12,14 @@ export function DealClosingFields({
   onChange,
   errors,
   dealType,
+  hideCounterparty = false,
 }: {
   value: ClosingDraft;
   onChange: (next: ClosingDraft) => void;
   errors: ClosingErrors;
   dealType: "jv" | "sale";
+  /** True when the buyer is picked separately (e.g. from the members), so their name, email and phone aren't asked here. */
+  hideCounterparty?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState("");
@@ -47,16 +50,20 @@ export function DealClosingFields({
         <MoneyInput value={value.finalAmount} onChange={(digits) => set("finalAmount", digits)} />
       </Field>
 
-      <p className="label pt-2 text-muted sm:col-span-2">{dealType === "jv" ? "Developer / investor" : "Buyer"}</p>
-      <Field label="Name">
-        <input value={value.name} onChange={(e) => set("name", e.target.value)} placeholder="Person or company" className={inputClass} />
-      </Field>
-      <Field label="Email">
-        <input type="email" value={value.email} onChange={(e) => set("email", e.target.value)} className={inputClass} />
-      </Field>
-      <Field label="Phone">
-        <input type="tel" value={value.phone} onChange={(e) => set("phone", e.target.value)} className={inputClass} />
-      </Field>
+      {hideCounterparty ? null : (
+        <>
+          <p className="label pt-2 text-muted sm:col-span-2">{dealType === "jv" ? "Developer / investor" : "Buyer"}</p>
+          <Field label="Name">
+            <input value={value.name} onChange={(e) => set("name", e.target.value)} placeholder="Person or company" className={inputClass} />
+          </Field>
+          <Field label="Email">
+            <input type="email" value={value.email} onChange={(e) => set("email", e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="Phone">
+            <input type="tel" value={value.phone} onChange={(e) => set("phone", e.target.value)} className={inputClass} />
+          </Field>
+        </>
+      )}
       <Field label="Facilitation fee (₦)" hint={suggestedFee ? `10% of the agreed amount is ${formatNaira(suggestedFee)}.` : "10% of the agreed amount."}>
         <MoneyInput value={value.facilitationFee} onChange={(digits) => set("facilitationFee", digits)} />
       </Field>

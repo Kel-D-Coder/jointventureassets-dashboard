@@ -11,6 +11,7 @@
 import { demoEnquiries, demoMessages, demoSend } from "@/lib/demoApi";
 import { readStored, removeStored } from "@/lib/storage";
 import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
+import { readPlotOptions } from "@/data/labels";
 import type {
   AdminSession,
   ContactMessage,
@@ -173,7 +174,7 @@ type ServerSubmission = ListingSubmission & WithId;
 const toSubmission = (submission: ServerSubmission): ListingSubmission => ({
   ...submission,
   // Listing titles are always shown in capitals.
-  listing: { ...submission.listing, title: (submission.listing?.title ?? "").toUpperCase() },
+  listing: { ...submission.listing, title: (submission.listing?.title ?? "").toUpperCase(), plotOptions: readPlotOptions(submission.listing?.plotOptions) },
   id: idOf(submission),
   kind: "listing-submission",
   documents: submission.documents ?? [],
@@ -228,6 +229,7 @@ function toListing(listing: ServerListing): Listing {
     highlights: listing.highlights ?? [],
     ...splitMedia(joinMedia(listing.images, listing.videos)),
     supportedDocuments: listing.supportedDocuments ?? [],
+    plotOptions: readPlotOptions(listing.plotOptions),
     userId: listing.userId ?? undefined,
     jv: listing.jv ?? undefined,
     ownerName: listing.ownerName ?? "",
@@ -324,6 +326,54 @@ const serverListings = {
     await call(`/admin/listings/${path(id)}`, { method: "DELETE" });
   },
 };
+
+// --- Listing viewers (/admin/listings/{id}/views) --------------------------
+
+/** A signed-in member who viewed a listing. */
+export interface ListingViewer {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  /** How many times they opened it. */
+  count: number;
+  firstViewedAt?: string;
+  lastViewedAt?: string;
+}
+
+/** Who viewed a listing: the signed-in members, most recent first, plus the views from visitors who weren't signed in. */
+export interface ListingViewers {
+  members: ListingViewer[];
+  anonymous: number;
+  total: number;
+}
+
+type ServerViewer = Record<string, unknown>;
+const text = (...values: unknown[]) => values.find((value): value is string => typeof value === "string" && value.length > 0) ?? "";
+const count = (...values: unknown[]) => Number(values.find((value) => value !== undefined && value !== null)) || 0;
+
+function toViewer(raw: ServerViewer): ListingViewer {
+  const user = (raw.user ?? raw.member ?? {}) as ServerViewer;
+  return {
+    userId: text(raw.userId, raw.id, raw._id, user.id, user._id),
+    name: text(raw.fullName, raw.name, user.fullName, user.name) || "Member",
+    email: text(raw.email, user.email),
+    role: text(raw.role, user.role),
+    count: count(raw.count, raw.views, raw.viewCount, raw.times, 1),
+    firstViewedAt: text(raw.firstViewedAt, raw.firstView, raw.firstSeenAt) || undefined,
+    lastViewedAt: text(raw.lastViewedAt, raw.lastView, raw.lastSeenAt, raw.viewedAt) || undefined,
+  };
+}
+
+/** GET /admin/listings/{id}/views. Works for admin listings and approved listing requests alike. */
+export async function listingViewers(id: string): Promise<ListingViewers> {
+  const body = (await call<unknown>(`/admin/listings/${path(id)}/views`)) as Record<string, unknown>;
+  const data = (body.data && typeof body.data === "object" ? body.data : body) as Record<string, unknown>;
+  const members = pickList<ServerViewer>(data, "members", "viewers", "users").map(toViewer);
+  const anonymous = count(data.anonymous, data.anonymousViews, data.anonymousCount, data.guests, data.guestViews);
+  const total = count(data.total, data.totalViews, data.views) || members.reduce((sum, member) => sum + member.count, 0) + anonymous;
+  return { members, anonymous, total };
+}
 
 // --- Members' requests (/admin/requests) ------------------------------------
 

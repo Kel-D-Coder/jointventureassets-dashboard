@@ -22,7 +22,19 @@ const SHOWN = 6;
  * automatically and the listing is linked to their account. Owners who aren't members can
  * still be typed in by hand.
  */
-export function OwnerPicker({ value, onChange, error }: { value: OwnerValue; onChange: (next: OwnerValue) => void; error?: string }) {
+export function OwnerPicker({
+  value,
+  onChange,
+  error,
+  role = "owner",
+}: {
+  value: OwnerValue;
+  onChange: (next: OwnerValue) => void;
+  error?: string;
+  /** Who is being picked, for the wording: a listing's owner, or a buyer. */
+  role?: "owner" | "buyer";
+}) {
+  const Role = role === "buyer" ? "Buyer" : "Owner";
   const { data: members = [], loading, error: loadError } = useResource(accounts.list, "Couldn't load the members.");
   const [query, setQuery] = useState("");
   // A listing that already has an owner typed in, and no member account, opens in manual mode.
@@ -53,13 +65,13 @@ export function OwnerPicker({ value, onChange, error }: { value: OwnerValue; onC
   if (manual) {
     return (
       <div className="mt-3 space-y-3">
-        <Field label="Owner's name" error={error}>
+        <Field label={`${Role}'s name`} error={error}>
           <input value={value.name} onChange={(e) => onChange({ ...value, userId: undefined, name: e.target.value })} placeholder="Person or company" className={inputClass} />
         </Field>
-        <Field label="Owner's email">
+        <Field label={`${Role}'s email`}>
           <input type="email" value={value.email} onChange={(e) => onChange({ ...value, userId: undefined, email: e.target.value })} className={inputClass} />
         </Field>
-        <Field label="Owner's phone" hint="Only the JVA team sees these.">
+        <Field label={`${Role}'s phone`} hint="Only the JVA team sees these.">
           <input type="tel" value={value.phone} onChange={(e) => onChange({ ...value, userId: undefined, phone: e.target.value })} className={inputClass} />
         </Field>
         <button type="button" onClick={() => setManual(false)} className="text-xs font-semibold text-gold-deep hover:underline">
@@ -86,7 +98,7 @@ export function OwnerPicker({ value, onChange, error }: { value: OwnerValue; onC
           onClick={() => onChange({ userId: undefined, name: "", email: "", phone: "" })}
           className="mt-2 text-xs font-semibold text-gold-deep hover:underline"
         >
-          Change owner
+          Change {role}
         </button>
       </div>
     );
@@ -126,7 +138,7 @@ export function OwnerPicker({ value, onChange, error }: { value: OwnerValue; onC
 
       {error ? <p className="text-xs font-medium text-danger">{error}</p> : null}
       <button type="button" onClick={() => setManual(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-deep hover:underline">
-        <FaPen aria-hidden="true" className="h-2.5 w-2.5" /> Owner isn't a member? Enter the details manually
+        <FaPen aria-hidden="true" className="h-2.5 w-2.5" /> {Role} isn't a member? Enter the details manually
       </button>
     </div>
   );

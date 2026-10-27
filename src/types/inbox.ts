@@ -77,10 +77,7 @@ export interface SubmittedListing {
   priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
   /** Joint ventures: the land value is still to be determined (price is then 0). */
   landValueTbd?: boolean;
-  /**
-   * Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the
-   * cheapest plot. TODO(backend): not sent to or read from the server yet.
-   */
+  /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
 }
 

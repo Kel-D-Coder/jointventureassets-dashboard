@@ -178,7 +178,6 @@ function SubmissionDetail({
         </dl>
 
         {isEstate(listing) ? (
-          // TODO(backend): plotOptions only arrive once the server stores them.
           <div className="mt-5">
             <p className="label mb-2 text-muted">Plot sizes &amp; prices</p>
             <div className="overflow-x-auto rounded-lg border border-fg/10">

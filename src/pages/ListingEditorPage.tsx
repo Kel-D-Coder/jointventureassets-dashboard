@@ -11,7 +11,7 @@ import { COMPANY_OWNER, missingFor, type CheckedField } from "@/lib/listingCheck
 import { listingStatusLabel, priceNegotiableLabel, priceNegotiableOptions, propertyTypeLabel, sharingFormulaOptions, SHARING_TBD } from "@/data/labels";
 import { websiteUrl } from "@/data/site";
 import { Button, Card, CardTitle, Field, MoneyInput, Notice, NumberInput, PageHeader, SkeletonRows, Tabs, YesNo, inputClass, type YesNoValue } from "@/ui";
-import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType, PriceNegotiable, SubmittedDocument } from "@/types";
+import type { DealType, Listing, ListingStatus, ListingSubmission, PartnerRequest, PropertyType, PlotSale, PriceNegotiable, SubmittedDocument } from "@/types";
 import { joinMedia, splitMedia } from "@/lib/videoWatermark";
 import { TitleDocumentPicker } from "@/components/TitleDocumentPicker";
 import { SupportingDocuments } from "@/components/SupportingDocuments";
@@ -19,6 +19,8 @@ import { OwnerPicker } from "@/components/OwnerPicker";
 import { isLandValueTbd } from "@/data/labels";
 import { PlotOptionsEditor } from "@/components/PlotOptionsEditor";
 import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem, type PlotRow } from "@/data/labels";
+import { PlotSalesCard } from "@/components/PlotSalesCard";
+import { ListingViewersCard } from "@/components/ListingViewersCard";
 
 /** Form values — numbers stay as strings while they're being typed. */
 interface Draft {
@@ -35,6 +37,8 @@ interface Draft {
   /** Sale listings: an estate with several plot sizes, each with its own price (plotRows). */
   isEstate: boolean;
   plotRows: PlotRow[];
+  /** Estates: plots sold so far. TODO(backend): not sent to the server yet. */
+  sales: PlotSale[];
   titleDocument: string;
   description: string;
   highlights: string;
@@ -54,10 +58,7 @@ interface Draft {
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
-  /**
-   * Listed under Joint Venture Assets: the actual owner's phone number, so the team can call them.
-   * Optional. TODO(backend): not sent to the server yet; it's lost on save until the server stores it.
-   */
+  /** Listed under Joint Venture Assets: the actual owner's phone number, so the team can call them. Optional; saved as `ownerPhone`. */
   companyOwnerPhone: string;
   /** Set when the owner was picked from the platform's members. */
   userId?: string;
@@ -84,6 +85,7 @@ const emptyDraft: Draft = {
   landValueTbd: false,
   isEstate: false,
   plotRows: plotRowsFrom(),
+  sales: [],
   titleDocument: "C of O",
   description: "",
   highlights: "",
@@ -132,6 +134,7 @@ function draftFromListing(listing: Listing): Draft {
     landValueTbd: isLandValueTbd(listing),
     isEstate: isEstate(listing),
     plotRows: plotRowsFrom(listing.plotOptions),
+    sales: listing.sales ?? [],
     titleDocument: listing.titleDocument,
     description: listing.description,
     highlights: listing.highlights.join("\n"),
@@ -144,10 +147,9 @@ function draftFromListing(listing: Listing): Draft {
     ownerMode: isCompany ? "company" : "other",
     ownerName: isCompany ? "" : listing.ownerName,
     ownerEmail: listing.ownerEmail ?? "",
-    ownerPhone: listing.ownerPhone ?? "",
+    ownerPhone: isCompany ? "" : listing.ownerPhone ?? "",
     userId: listing.userId,
-    // TODO(backend): read the owner's phone back once the server stores it.
-    companyOwnerPhone: "",
+    companyOwnerPhone: isCompany ? listing.ownerPhone ?? "" : "",
     status: listing.status,
     closing: closingDraft(listing.closing, listing.price),
     featured: listing.featured,
@@ -216,8 +218,9 @@ function draftFromRequest(request: PartnerRequest): Draft {
 
 function toInput(draft: Draft, status: ListingStatus): ListingInput {
   const estate = draft.dealType === "sale" && draft.isEstate;
-  // Cheapest first. TODO(backend): send the whole list as `plotOptions` once the server stores it.
-  const cheapest = estate ? plotOptionsFrom(draft.plotRows)[0] : undefined;
+  // Cheapest first; the cheapest also fills the usual size, price and negotiable fields.
+  const plots = estate ? plotOptionsFrom(draft.plotRows) : [];
+  const cheapest = plots[0];
   return {
     title: draft.title.trim(),
     dealType: draft.dealType,
@@ -247,8 +250,10 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
         : undefined,
     ownerName: draft.ownerMode === "company" ? COMPANY_OWNER : draft.ownerName.trim(),
     ownerEmail: draft.ownerMode === "company" ? undefined : draft.ownerEmail.trim() || undefined,
-    ownerPhone: draft.ownerMode === "company" ? undefined : draft.ownerPhone.trim() || undefined,
+    ownerPhone: (draft.ownerMode === "company" ? draft.companyOwnerPhone : draft.ownerPhone).trim() || undefined,
     userId: draft.ownerMode === "company" ? undefined : draft.userId,
+    // An empty list clears plot sizes from a listing that's no longer an estate.
+    plotOptions: plots,
     status,
     closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
@@ -335,6 +340,10 @@ export default function ListingEditorPage() {
 
   const isDraft = draft.status === "draft";
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => ({ ...current, [key]: value }));
+
+  /** Estates: a plot sold, or a recorded sale taken back out. */
+  const recordSale = (sale: PlotSale) => setDraft((current) => ({ ...current, sales: [...current.sales, sale] }));
+  const removeSale = (sale: PlotSale) => setDraft((current) => ({ ...current, sales: current.sales.filter((other) => other.id !== sale.id) }));
 
   const persist = async (status: ListingStatus, successText: string) => {
     busyRef.current = true;
@@ -540,6 +549,10 @@ export default function ListingEditorPage() {
             ) : null}
           </Card>
 
+          {!isNew && draft.dealType === "sale" && draft.isEstate ? (
+            <PlotSalesCard plots={plotOptionsFrom(draft.plotRows)} sales={draft.sales} onRecord={recordSale} onRemove={removeSale} />
+          ) : null}
+
           {draft.dealType === "jv" ? (
             <Card className="border-gold/30 bg-gold-soft/35">
               <CardTitle hint="What a developer would be signing up for.">Joint-venture terms</CardTitle>
@@ -616,6 +629,8 @@ export default function ListingEditorPage() {
             <CardTitle hint="Copies of the title documents ticked above, so ownership can be verified. Optional, but recommended.">Supporting documents</CardTitle>
             <SupportingDocuments documents={draft.documents} onChange={(documents) => set("documents", documents)} titleDocument={draft.titleDocument} />
           </Card>
+
+          {listingId ? <ListingViewersCard listingId={listingId} /> : null}
         </div>
 
         <div className="space-y-6">
