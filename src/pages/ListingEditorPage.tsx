@@ -514,7 +514,7 @@ export default function ListingEditorPage() {
                 </div>
               ) : (
                 <>
-              <Field label="Size (sqm)" error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
+              <Field label={draft.dealType === "sale" ? "Size (sqm, optional)" : "Size (sqm)"} error={errors.sizeSqm} hint="1 hectare = 10,000 sqm">
                 <NumberInput value={draft.sizeSqm} onChange={(digits) => set("sizeSqm", digits)} />
               </Field>
               <Field label={draft.dealType === "jv" ? "Land value (₦)" : "Asking price (₦)"} error={errors.price}>

@@ -176,9 +176,9 @@ export function plotRowsProblem(rows: PlotRow[]): string | undefined {
 /** True when the listing is an estate with more than one plot size. */
 export const isEstate = (listing: { plotOptions?: PlotOption[] }) => (listing.plotOptions?.length ?? 0) > 1;
 
-/** "750 sqm", or "200–1,000 sqm" for an estate. */
+/** "750 sqm", "200–1,000 sqm" for an estate, or "" when no size was given (it's optional for a sale). */
 export function sizeText(listing: { sizeSqm: number; plotOptions?: PlotOption[] }): string {
-  if (!isEstate(listing)) return formatSize(listing.sizeSqm);
+  if (!isEstate(listing)) return listing.sizeSqm > 0 ? formatSize(listing.sizeSqm) : "";
   const sizes = listing.plotOptions!.map((option) => option.sizeSqm);
   return `${Math.min(...sizes).toLocaleString("en-NG")}–${formatSize(Math.max(...sizes))}`;
 }

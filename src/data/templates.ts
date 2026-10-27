@@ -156,7 +156,7 @@ export const documentTemplates: DocumentTemplate[] = [
 
       { key: "propertyAddress", label: "Property address", group: "Property" },
       { key: "propertyLocation", label: "Property location", group: "Property", fromListing: location },
-      { key: "landSize", label: "Land size (sqm)", group: "Property", fromListing: (l) => l.sizeSqm.toLocaleString("en-NG") },
+      { key: "landSize", label: "Land size (sqm)", group: "Property", fromListing: (l) => (l.sizeSqm > 0 ? l.sizeSqm.toLocaleString("en-NG") : "") },
       { key: "titleDocument", label: "Title document", group: "Property", fromListing: (l) => l.titleDocument },
       { key: "surveyNumber", label: "Survey plan number", group: "Property", optional: true },
       { key: "landValue", label: "Land value (₦)", group: "Property", hint: "Numbers only; ₦ is added", fromListing: (l) => (isLandValueTbd(l) ? "" : l.price.toLocaleString("en-NG")) },
@@ -354,7 +354,7 @@ export const documentTemplates: DocumentTemplate[] = [
       { key: "clientAddress", label: "Client address", group: "Client (Party A, the Developer)" },
       { key: "propertyDescription", label: "Property description", group: "Property", kind: "textarea", fromListing: (l) => l.title },
       { key: "propertyLocation", label: "Property location", group: "Property", fromListing: location },
-      { key: "landSize", label: "Land size", group: "Property", hint: "e.g. 2,400 sqm", fromListing: (l) => formatSize(l.sizeSqm) },
+      { key: "landSize", label: "Land size", group: "Property", hint: "e.g. 2,400 sqm", fromListing: (l) => (l.sizeSqm > 0 ? formatSize(l.sizeSqm) : "") },
       { key: "companyName", label: "Company name", group: "Joint Venture Assets (Party B, the Facilitator)", defaultValue: "Joint Venture Assets" },
       { key: "companyAddress", label: "Company address", group: "Joint Venture Assets (Party B, the Facilitator)", defaultValue: "Lagos, Nigeria" },
       { key: "companyEmail", label: "Company email", group: "Joint Venture Assets (Party B, the Facilitator)", defaultValue: "info@jointventureassets.com", hint: "Shown in the letterhead" },

@@ -38,7 +38,8 @@ const checks: Check[] = [
   { field: "title", label: "Title", message: "Give the listing a title.", passes: (l) => Boolean(l.title.trim()) },
   { field: "images", label: "Photos", message: "Upload at least one photo.", passes: (l) => l.images.some((url) => !isVideoUrl(url)) },
   { field: "titleDocument", label: "Title documents", message: "Pick at least one title document.", passes: (l) => splitTitles(l.titleDocument).length > 0 },
-  { field: "sizeSqm", label: "Size", message: "Enter the size in square metres.", passes: (l) => l.sizeSqm > 0 },
+  // Optional for a sale; a joint venture needs it.
+  { field: "sizeSqm", label: "Size", message: "Enter the size in square metres.", passes: (l) => l.dealType === "sale" || l.sizeSqm > 0 },
   { field: "price", label: "Price", message: "Enter an amount in naira, or tick TBD for a joint venture.", passes: (l) => l.price > 0 || (l.dealType === "jv" && Boolean(l.landValueTbd)) },
   { field: "area", label: "Area", message: "Add the area.", passes: (l) => Boolean(l.area.trim()) },
   { field: "city", label: "City", message: "Add the city.", passes: (l) => Boolean(l.city.trim()) },

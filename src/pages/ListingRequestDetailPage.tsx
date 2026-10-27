@@ -149,7 +149,7 @@ function SubmissionDetail({
 
         <dl className="mt-6 grid gap-5 border-t border-fg/8 pt-5 sm:grid-cols-4">
           <Fact label={listing.dealType === "jv" ? "Land value" : "Asking price"}>{listing.landValueTbd ? "To be determined" : priceText(listing)}</Fact>
-          <Fact label="Size">{formatSize(listing.sizeSqm)}</Fact>
+          <Fact label="Size">{listing.sizeSqm > 0 ? formatSize(listing.sizeSqm) : "Not stated"}</Fact>
           <Fact label="Type">{propertyTypeLabel[listing.propertyType]}</Fact>
           <Fact label="Title document">{listing.titleDocument}</Fact>
           {listing.jv ? (
@@ -339,7 +339,7 @@ function loiPrefill(submission: ListingSubmission) {
       landownerSignatory: submission.isOwner ? contact.fullName : listing.ownerName,
       propertyAddress: `${listing.area}, ${listing.city}`,
       propertyLocation: locationOf(listing),
-      landSize: listing.sizeSqm.toLocaleString("en-NG"),
+      landSize: listing.sizeSqm > 0 ? listing.sizeSqm.toLocaleString("en-NG") : "",
       titleDocument: listing.titleDocument,
       landValue: listing.landValueTbd ? "" : listing.price.toLocaleString("en-NG"),
       propertyDescription: listing.description,
@@ -360,7 +360,7 @@ function facilitationPrefill(submission: ListingSubmission) {
     prefill: {
       propertyDescription: listing.title,
       propertyLocation: locationOf(listing),
-      landSize: formatSize(listing.sizeSqm),
+      landSize: listing.sizeSqm > 0 ? formatSize(listing.sizeSqm) : "",
     },
   };
 }

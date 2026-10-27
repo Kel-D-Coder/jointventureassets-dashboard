@@ -116,6 +116,7 @@ function DealDetail({ deal, plotSale = false }: { deal: ClosedListing; plotSale?
     ],
     ["Facilitation fee", closing.facilitationFee ? formatNaira(closing.facilitationFee) : "None recorded"],
     [plotSale ? "Plot size" : "Size", formatSize(deal.sizeSqm)],
+    ["Size", deal.sizeSqm > 0 ? formatSize(deal.sizeSqm) : "Not stated"],
     ["Title document", deal.titleDocument],
     ["Location", `${deal.area}, ${deal.city}, ${deal.state}`],
   ];
@@ -145,7 +146,7 @@ function DealDetail({ deal, plotSale = false }: { deal: ClosedListing; plotSale?
               {plotSale ? <Pill tone="gold">Plot sold</Pill> : <Pill tone="success">Closed</Pill>}
             </div>
             <p className="mt-2 text-sm text-muted">
-              {deal.area}, {deal.city}, {deal.state} · {formatSize(deal.sizeSqm)} · {deal.titleDocument}
+              {deal.area}, {deal.city}, {deal.state}{deal.sizeSqm > 0 ? ` · ${formatSize(deal.sizeSqm)}` : ""} · {deal.titleDocument}
             </p>
             <Link to={`/listings/${deal.id}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-deep hover:underline">
               <FaPen aria-hidden="true" /> {plotSale ? "Open the estate and its plot sales" : "Edit listing or closing details"}

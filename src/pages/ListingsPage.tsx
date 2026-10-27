@@ -148,7 +148,8 @@ function ListingCard({ listing, enquiries }: { listing: Listing; enquiries: numb
           </div>
           <div className="text-right text-xs text-muted">
             <p>
-              {propertyTypeLabel[listing.propertyType]} · {formatSize(listing.sizeSqm)}
+              {propertyTypeLabel[listing.propertyType]}
+              {listing.sizeSqm > 0 ? ` · ${formatSize(listing.sizeSqm)}` : ""}
             </p>
             <p className="mt-1 inline-flex items-center gap-3">
               <span className="inline-flex items-center gap-1"><FaEye aria-hidden="true" /> {listing.views}</span>
