@@ -54,6 +54,7 @@ export default function App() {
         <Route path="drafts" element={<DraftsPage />} />
         <Route path="closed-deals" element={<ClosedDealsPage />} />
         <Route path="closed-deals/:listingId" element={<ClosedDealDetailPage />} />
+        <Route path="closed-deals/:listingId/sales/:saleId" element={<ClosedDealDetailPage />} />
         <Route path="enquiries" element={<EnquiriesPage />} />
         <Route path="enquiries/:enquiryId" element={<EnquiryDetailPage />} />
         <Route path="listing-requests" element={<ListingRequestsPage />} />

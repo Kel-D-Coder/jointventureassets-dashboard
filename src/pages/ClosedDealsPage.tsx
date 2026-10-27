@@ -6,13 +6,17 @@ import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";
 import { cx, formatDate, formatNairaShort, formatSize } from "@/lib/format";
-import { EmptyState, Notice, PageHeader, RowLink, SkeletonRows, StatCard, Table, Tabs, inputClass } from "@/ui";
+import { EmptyState, Notice, PageHeader, Pill, RowLink, SkeletonRows, StatCard, Table, Tabs, inputClass } from "@/ui";
 import type { DealClosing, DealType, Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
+import { isEstate as hasPlotSizes } from "@/data/labels";
+
+/** An estate: a sale listing with several plot sizes, sold plot by plot. */
+const isEstate = (listing: Listing) => listing.dealType === "sale" && hasPlotSizes(listing);
 
 type ClosedListing = Listing & { closing: DealClosing };
 /** A row on this page: a closed listing, or one plot sold from an estate (which stays live). */
-type DealRow = ClosedListing & { rowKey: string; link: string };
+type DealRow = ClosedListing & { rowKey: string; link: string; isPlotSale: boolean };
 type TypeFilter = DealType | "all";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -27,15 +31,17 @@ async function loadDeals() {
   const closed = all.filter((listing) => listing.status === "closed");
   const closedDeals: DealRow[] = closed
     .filter((listing): listing is ClosedListing => Boolean(listing.closing))
-    .map((listing) => ({ ...listing, rowKey: listing.id, link: `/closed-deals/${listing.id}` }));
-  // Estates: each plot sold is its own deal; the row opens the estate, which may still be live.
+    .map((listing) => ({ ...listing, rowKey: listing.id, link: `/closed-deals/${listing.id}`, isPlotSale: false }));
+  // Estates: each plot sold is its own deal, while the estate itself may still be live.
   const plotSales: DealRow[] = all.flatMap((listing) =>
     (listing.sales ?? []).map((sale) => ({
       ...listing,
       title: `${listing.title}: ${formatSize(sale.plotSizeSqm)} plot`,
       closing: sale,
+      sizeSqm: sale.plotSizeSqm,
       rowKey: `${listing.id}-${sale.id}`,
-      link: `/listings/${listing.id}`,
+      link: `/closed-deals/${listing.id}/sales/${sale.id}`,
+      isPlotSale: true,
     })),
   );
   const deals = [...closedDeals, ...plotSales].sort((a, b) => b.closing.closedAt.localeCompare(a.closing.closedAt));
@@ -66,6 +72,7 @@ export default function ClosedDealsPage() {
   const totalValue = deals.reduce((sum, deal) => sum + deal.closing.finalAmount, 0);
   const totalFees = deals.reduce((sum, deal) => sum + deal.closing.facilitationFee, 0);
   const averageDays = deals.length ? Math.round(deals.reduce((sum, deal) => sum + daysToClose(deal), 0) / deals.length) : 0;
+  const plotSaleCount = deals.filter((deal) => deal.isPlotSale).length;
 
   return (
     <div className="space-y-6">
@@ -78,13 +85,19 @@ export default function ClosedDealsPage() {
             <select
               aria-label="Record a closed deal"
               value=""
-              onChange={(event) => event.target.value && navigate(`/listings/${event.target.value}?close=1`)}
+              onChange={(event) => {
+                const listing = data.open.find((candidate) => candidate.id === event.target.value);
+                if (!listing) return;
+                // An estate stays live while its plots sell: open it at the Plot sales card instead of closing it.
+                navigate(isEstate(listing) ? `/listings/${listing.id}` : `/listings/${listing.id}?close=1`);
+              }}
               className={cx(inputClass, "w-auto! font-semibold")}
             >
               <option value="">Record a closed deal…</option>
               {data.open.map((listing) => (
                 <option key={listing.id} value={listing.id}>
                   {listing.title}
+                  {isEstate(listing) ? " (record a plot sale)" : ""}
                 </option>
               ))}
             </select>
@@ -95,7 +108,13 @@ export default function ClosedDealsPage() {
       {error ? <Notice tone="error">{error}</Notice> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Deals closed" value={deals.length} icon={FaHandshake} note={plural(deals.filter((d) => d.dealType === "jv").length, "joint venture") + " · " + plural(deals.filter((d) => d.dealType === "sale").length, "sale")} />
+        <StatCard label="Deals closed" value={deals.length} icon={FaHandshake} note={
+            plural(deals.filter((d) => d.dealType === "jv").length, "joint venture") +
+            " · " +
+            plural(deals.filter((d) => d.dealType === "sale").length, "sale") +
+            (plotSaleCount ? ` (${plural(plotSaleCount, "estate plot")})` : "")
+          }
+        />
         <StatCard label="Total deal value" value={formatNairaShort(totalValue)} icon={FaMoneyBillWave} />
         <StatCard label="Facilitation fees" value={formatNairaShort(totalFees)} icon={FaCalendarCheck} note="Earned by JVA" />
         <StatCard label="Average time to close" value={`${averageDays} days`} icon={FaClock} note="From listing to closing" />
@@ -170,7 +189,8 @@ export default function ClosedDealsPage() {
                   <span className="min-w-0">
                     <span className="block max-w-xs truncate font-semibold text-fg hover:underline">{deal.title}</span>
                     <span className="mt-0.5 flex items-center gap-2 text-xs text-muted">
-                      <DealTypePill dealType={deal.dealType} /> {deal.area}, {deal.city}
+                      <DealTypePill dealType={deal.dealType} />
+                      {deal.isPlotSale ? <Pill tone="gold">Plot sold</Pill> : null} {deal.area}, {deal.city}
                     </span>
                   </span>
                 </Link>

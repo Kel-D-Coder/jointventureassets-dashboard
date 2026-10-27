@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FaArrowLeft, FaArrowUpRightFromSquare, FaFloppyDisk, FaPhone, FaTrashCan } from "react-icons/fa6";
-import { listings, type ListingInput } from "@/lib/api";
+import { listings, plotSales, type ListingInput, type PlotSaleInput } from "@/lib/api";
 import { useAction } from "@/hooks/useResource";
 import { cx } from "@/lib/format";
 import { ImageUploader } from "@/components/ImageUploader";
@@ -37,7 +37,7 @@ interface Draft {
   /** Sale listings: an estate with several plot sizes, each with its own price (plotRows). */
   isEstate: boolean;
   plotRows: PlotRow[];
-  /** Estates: plots sold so far. TODO(backend): not sent to the server yet. */
+  /** Estates: plots sold so far. Each is saved to the server as it's recorded, not with the listing. */
   sales: PlotSale[];
   titleDocument: string;
   description: string;
@@ -341,9 +341,22 @@ export default function ListingEditorPage() {
   const isDraft = draft.status === "draft";
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => ({ ...current, [key]: value }));
 
-  /** Estates: a plot sold, or a recorded sale taken back out. */
-  const recordSale = (sale: PlotSale) => setDraft((current) => ({ ...current, sales: [...current.sales, sale] }));
-  const removeSale = (sale: PlotSale) => setDraft((current) => ({ ...current, sales: current.sales.filter((other) => other.id !== sale.id) }));
+  /**
+   * Estates: a plot sold, or a recorded sale taken back out. Both are saved to the server straight away,
+   * so the saved copy of the form takes the new sales too and they don't count as unsaved changes.
+   */
+  const applySales = (sales: PlotSale[]) => {
+    savedRef.current = { ...savedRef.current, sales };
+    setDraft((current) => ({ ...current, sales }));
+  };
+  const recordSale = async (sale: PlotSaleInput) => {
+    if (!listingId) return;
+    applySales((await plotSales.record(listingId, sale)).sales ?? []);
+  };
+  const removeSale = async (sale: PlotSale) => {
+    if (!listingId) return;
+    applySales((await plotSales.remove(listingId, sale.id)).sales ?? []);
+  };
 
   const persist = async (status: ListingStatus, successText: string) => {
     busyRef.current = true;
@@ -549,8 +562,14 @@ export default function ListingEditorPage() {
             ) : null}
           </Card>
 
-          {!isNew && draft.dealType === "sale" && draft.isEstate ? (
-            <PlotSalesCard plots={plotOptionsFrom(draft.plotRows)} sales={draft.sales} onRecord={recordSale} onRemove={removeSale} />
+          {listingId && draft.dealType === "sale" && draft.isEstate ? (
+            <PlotSalesCard
+              listingId={listingId}
+              plots={plotOptionsFrom(draft.plotRows)}
+              sales={draft.sales}
+              onRecord={recordSale}
+              onRemove={removeSale}
+            />
           ) : null}
 
           {draft.dealType === "jv" ? (

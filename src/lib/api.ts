@@ -21,6 +21,7 @@ import type {
   ListingSubmission,
   MemberAccount,
   PartnerRequest,
+  PlotSale,
   SubmissionStatus,
   SubmittedDocument,
   AccountStatus,
@@ -241,7 +242,28 @@ function toListing(listing: ServerListing): Listing {
     views: Number(listing.views) || 0,
     sourceSubmissionId: listing.sourceSubmissionId ?? undefined,
     closing: listing.closing ?? undefined,
+    sales: (listing.sales ?? []).map(toSale),
     createdAt: listing.createdAt ?? new Date().toISOString(),
+  };
+}
+
+type ServerSale = Partial<PlotSale> & WithId;
+
+function toSale(sale: ServerSale): PlotSale {
+  return {
+    id: idOf(sale),
+    plotSizeSqm: Number(sale.plotSizeSqm) || 0,
+    buyerUserId: sale.buyerUserId ?? undefined,
+    closedAt: sale.closedAt ?? "",
+    counterparty: {
+      name: sale.counterparty?.name ?? "",
+      email: sale.counterparty?.email ?? "",
+      phone: sale.counterparty?.phone ?? "",
+    },
+    finalAmount: Number(sale.finalAmount) || 0,
+    facilitationFee: Number(sale.facilitationFee) || 0,
+    documents: sale.documents ?? [],
+    notes: sale.notes ?? "",
   };
 }
 
@@ -252,7 +274,8 @@ async function toListingBody(input: ListingInput): Promise<ListingInput> {
   const videos = await Promise.all(media.videos.map((url) => uploadIfNeeded(url, "video")));
   const closing = input.closing ? { ...input.closing, documents: await uploadDocuments(input.closing.documents) } : undefined;
   const supportedDocuments = await uploadDocuments(input.supportedDocuments ?? []);
-  return { ...input, images, videos, supportedDocuments, closing, jv: input.dealType === "jv" ? input.jv : undefined };
+  // Plot sales are saved one at a time through plotSales below, not with the listing.
+  return { ...input, images, videos, supportedDocuments, closing, sales: undefined, jv: input.dealType === "jv" ? input.jv : undefined };
 }
 
 /** An approved listing request is live on the website; the dashboard shows it as a published listing with the request's id. */
@@ -324,6 +347,27 @@ const serverListings = {
       return;
     }
     await call(`/admin/listings/${path(id)}`, { method: "DELETE" });
+  },
+};
+
+// --- Estate plot sales (/admin/listings/{id}/sales) -------------------------
+
+export type PlotSaleInput = Omit<PlotSale, "id">;
+
+export const plotSales = {
+  /** POST /admin/listings/{id}/sales: records one plot sold. Documents are uploaded first. Returns the estate with all its sales. */
+  record: async (listingId: string, sale: PlotSaleInput): Promise<Listing> => {
+    const documents = await uploadDocuments(sale.documents);
+    const body = await call<unknown>(`/admin/listings/${path(listingId)}/sales`, {
+      method: "POST",
+      body: JSON.stringify({ ...sale, documents }),
+    });
+    return toListing(pickOne<ServerListing>(body, "listing"));
+  },
+  /** DELETE /admin/listings/{id}/sales/{saleId}. Returns the estate with the sales left. */
+  remove: async (listingId: string, saleId: string): Promise<Listing> => {
+    const body = await call<unknown>(`/admin/listings/${path(listingId)}/sales/${path(saleId)}`, { method: "DELETE" });
+    return toListing(pickOne<ServerListing>(body, "listing"));
   },
 };
 

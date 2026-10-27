@@ -53,7 +53,7 @@ export interface Listing {
   landValueTbd?: boolean;
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
-  /** Estates: the plots sold so far. TODO(backend): not sent to or read from the server yet. */
+  /** Estates: the plots sold so far, oldest first. Recorded one at a time (api.plotSales), not saved with the listing. */
   sales?: PlotSale[];
   featured: boolean;
   verified: boolean;

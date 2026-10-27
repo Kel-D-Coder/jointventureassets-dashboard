@@ -18,14 +18,60 @@ type ClosedListing = Listing & { closing: DealClosing };
 const DAY = 24 * 60 * 60 * 1000;
 const daysToClose = (deal: ClosedListing) => Math.max(0, Math.round((Date.parse(deal.closing.closedAt) - Date.parse(deal.createdAt)) / DAY));
 
+/**
+ * One closed deal: a closed listing (/closed-deals/:listingId), or one plot sold from an estate
+ * (/closed-deals/:listingId/sales/:saleId), which is shown the same way while the estate stays live.
+ */
 export default function ClosedDealDetailPage() {
-  const { listingId = "" } = useParams();
+  const { listingId = "", saleId } = useParams();
   const load = useCallback(() => listings.get(listingId), [listingId]);
   const { data: listing, loading, error } = useResource(load, "Couldn't load this deal.");
 
   const back = <BackLink to="/closed-deals">All closed deals</BackLink>;
   if (loading) return <div className="space-y-6">{back}<SkeletonRows rows={6} /></div>;
   if (error || !listing) return <div className="space-y-6">{back}<Notice tone="error">{error}</Notice></div>;
+
+  if (saleId) {
+    const sale = listing.sales?.find((candidate) => candidate.id === saleId);
+    if (!sale) {
+      return (
+        <div className="space-y-6">
+          {back}
+          <Notice tone="error">This plot sale wasn't found. It may have been removed.</Notice>
+          <Link to={`/listings/${listing.id}`} className="text-sm font-semibold text-gold-deep hover:underline">
+            Open the estate
+          </Link>
+        </div>
+      );
+    }
+    const plot = listing.plotOptions?.find((option) => option.sizeSqm === sale.plotSizeSqm);
+    const deal: ClosedListing = {
+      ...listing,
+      title: `${listing.title}: ${formatSize(sale.plotSizeSqm)} plot`,
+      sizeSqm: sale.plotSizeSqm,
+      price: plot?.price ?? 0,
+      closing: sale,
+    };
+    return (
+      <div className="space-y-6">
+        {back}
+        <PageHeader
+          eyebrow={`Plot sale · ${listing.id.toUpperCase()}`}
+          title={deal.title}
+          intro={
+            <>
+              Sold {formatDateTime(sale.closedAt)} to{" "}
+              <PersonLink name={sale.counterparty.name} email={sale.counterparty.email} userId={sale.buyerUserId} className="font-semibold text-fg" /> for{" "}
+              <span className="font-semibold text-fg">{formatNaira(sale.finalAmount)}</span>
+            </>
+          }
+          action={<Pill tone="gold">Plot sold</Pill>}
+        />
+        <DealDetail deal={deal} plotSale />
+      </div>
+    );
+  }
+
   if (!listing.closing) {
     return (
       <div className="space-y-6">
@@ -59,14 +105,17 @@ export default function ClosedDealDetailPage() {
   );
 }
 
-function DealDetail({ deal }: { deal: ClosedListing }) {
+function DealDetail({ deal, plotSale = false }: { deal: ClosedListing; plotSale?: boolean }) {
   const { closing } = deal;
   const days = daysToClose(deal);
   const facts: Array<[string, string]> = [
     [deal.dealType === "jv" ? "Agreed land value" : "Final sale price", formatNaira(closing.finalAmount)],
-    [deal.dealType === "jv" ? "Listed land value" : "Asking price", isLandValueTbd(deal) ? "To be determined" : deal.price ? formatNaira(deal.price) : "Not set"],
+    [
+      deal.dealType === "jv" ? "Listed land value" : plotSale ? "Plot's asking price" : "Asking price",
+      isLandValueTbd(deal) ? "To be determined" : deal.price ? formatNaira(deal.price) : "Not set",
+    ],
     ["Facilitation fee", closing.facilitationFee ? formatNaira(closing.facilitationFee) : "None recorded"],
-    ["Size", formatSize(deal.sizeSqm)],
+    [plotSale ? "Plot size" : "Size", formatSize(deal.sizeSqm)],
     ["Title document", deal.titleDocument],
     ["Location", `${deal.area}, ${deal.city}, ${deal.state}`],
   ];
@@ -93,13 +142,13 @@ function DealDetail({ deal }: { deal: ClosedListing }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1.5">
               <DealTypePill dealType={deal.dealType} />
-              <Pill tone="success">Closed</Pill>
+              {plotSale ? <Pill tone="gold">Plot sold</Pill> : <Pill tone="success">Closed</Pill>}
             </div>
             <p className="mt-2 text-sm text-muted">
               {deal.area}, {deal.city}, {deal.state} · {formatSize(deal.sizeSqm)} · {deal.titleDocument}
             </p>
             <Link to={`/listings/${deal.id}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-deep hover:underline">
-              <FaPen aria-hidden="true" /> Edit listing or closing details
+              <FaPen aria-hidden="true" /> {plotSale ? "Open the estate and its plot sales" : "Edit listing or closing details"}
             </Link>
           </div>
         </div>
@@ -145,7 +194,9 @@ function DealDetail({ deal }: { deal: ClosedListing }) {
         {closing.documents.length ? (
           <DocumentList documents={closing.documents} />
         ) : (
-          <p className="text-sm text-muted">No documents attached. Add them from the listing's closing details.</p>
+          <p className="text-sm text-muted">
+            {plotSale ? "No documents were attached to this sale." : "No documents attached. Add them from the listing's closing details."}
+          </p>
         )}
       </Card>
     </div>

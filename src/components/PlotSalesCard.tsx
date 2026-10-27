@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { FaPlus } from "react-icons/fa6";
 import { DealClosingFields } from "@/components/DealClosingFields";
 import { OwnerPicker, type OwnerValue } from "@/components/OwnerPicker";
 import { PersonLink } from "@/components/PersonLink";
 import { closingDraft, closingErrors, toClosing, type ClosingDraft, type ClosingErrors } from "@/lib/closing";
 import { formatDate, formatNaira, formatNairaShort, formatSize } from "@/lib/format";
-import { Button, Card, CardTitle, DeleteButton, Field, inputClass } from "@/ui";
+import type { PlotSaleInput } from "@/lib/api";
+import { Button, Card, CardTitle, DeleteButton, Field, Notice, inputClass } from "@/ui";
 import type { PlotOption, PlotSale } from "@/types";
 
 const noBuyer: OwnerValue = { userId: undefined, name: "", email: "", phone: "" };
@@ -13,20 +15,23 @@ const noBuyer: OwnerValue = { userId: undefined, name: "", email: "", phone: "" 
 /**
  * An estate's plot sales: each plot is recorded as it sells, with the usual closing details, while
  * the estate stays live. The buyer is picked from the platform's members, like a listing's owner,
- * or typed in. Each sale shows on the Closed deals page.
- * TODO(backend): sales aren't sent to the server yet, so they're lost on save until it stores `sales`.
+ * or typed in. Each sale is saved to the server straight away (not with the listing) and shows on
+ * the Closed deals page.
  */
 export function PlotSalesCard({
+  listingId,
   plots,
   sales,
   onRecord,
   onRemove,
 }: {
+  listingId: string;
   /** The estate's plot sizes as currently entered. */
   plots: PlotOption[];
   sales: PlotSale[];
-  onRecord: (sale: PlotSale) => void;
-  onRemove: (sale: PlotSale) => void;
+  /** Saves the sale; rejects with the server's message if it couldn't. */
+  onRecord: (sale: PlotSaleInput) => Promise<void>;
+  onRemove: (sale: PlotSale) => Promise<void>;
 }) {
   const [recording, setRecording] = useState(false);
   const [plotSize, setPlotSize] = useState<number | null>(null);
@@ -35,6 +40,8 @@ export function PlotSalesCard({
   const [errors, setErrors] = useState<ClosingErrors>({});
   const [plotError, setPlotError] = useState("");
   const [buyerError, setBuyerError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState("");
 
   const total = sales.reduce((sum, sale) => sum + sale.finalAmount, 0);
   const fees = sales.reduce((sum, sale) => sum + sale.facilitationFee, 0);
@@ -55,17 +62,35 @@ export function PlotSalesCard({
     setErrors({});
     setPlotError("");
     setBuyerError("");
+    setProblem("");
   };
 
-  const save = () => {
+  const save = async () => {
     const problems = closingErrors(draft);
     setErrors(problems);
     setPlotError(plotSize === null ? "Choose which plot size was sold." : "");
     setBuyerError(buyer.name.trim() ? "" : "Choose the buyer from the members, or enter their name.");
     if (plotSize === null || !buyer.name.trim() || Object.keys(problems).length) return;
     const closing = toClosing({ ...draft, name: buyer.name, email: buyer.email, phone: buyer.phone });
-    onRecord({ ...closing, id: crypto.randomUUID(), plotSizeSqm: plotSize, buyerUserId: buyer.userId });
-    close();
+    setSaving(true);
+    setProblem("");
+    try {
+      await onRecord({ ...closing, plotSizeSqm: plotSize, buyerUserId: buyer.userId });
+      close();
+    } catch (caught) {
+      setProblem((caught as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (sale: PlotSale) => {
+    setProblem("");
+    try {
+      await onRemove(sale);
+    } catch (caught) {
+      setProblem((caught as Error).message);
+    }
   };
 
   return (
@@ -82,7 +107,9 @@ export function PlotSalesCard({
               .sort((a, b) => b.closedAt.localeCompare(a.closedAt))
               .map((sale) => (
                 <li key={sale.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5 text-sm">
-                  <span className="font-semibold text-fg">{formatSize(sale.plotSizeSqm)} plot</span>
+                  <Link to={`/closed-deals/${listingId}/sales/${sale.id}`} className="font-semibold text-fg hover:underline">
+                    {formatSize(sale.plotSizeSqm)} plot
+                  </Link>
                   <span className="min-w-0 flex-1 truncate text-muted">
                     {sale.counterparty.name ? (
                       <PersonLink name={sale.counterparty.name} email={sale.counterparty.email} className="font-medium text-fg" />
@@ -92,7 +119,7 @@ export function PlotSalesCard({
                     · {formatDate(sale.closedAt)}
                   </span>
                   <span className="font-semibold text-fg tabular-nums">{formatNaira(sale.finalAmount)}</span>
-                  <DeleteButton label="Remove" onConfirm={() => onRemove(sale)} />
+                  <DeleteButton label="Remove" onConfirm={() => remove(sale)} />
                 </li>
               ))}
           </ul>
@@ -100,6 +127,12 @@ export function PlotSalesCard({
       ) : (
         <p className="mb-4 text-sm text-muted">No plots sold yet.</p>
       )}
+
+      {problem ? (
+        <div className="mb-4">
+          <Notice tone="error">{problem}</Notice>
+        </div>
+      ) : null}
 
       {recording ? (
         <div className="space-y-4 rounded-lg border border-gold/30 bg-gold-soft/20 p-4">
@@ -129,10 +162,10 @@ export function PlotSalesCard({
 
           <DealClosingFields value={draft} onChange={setDraft} errors={errors} dealType="sale" hideCounterparty />
           <div className="flex flex-wrap gap-2">
-            <Button tone="gold" size="md" onClick={save}>
-              Save sale
+            <Button tone="gold" size="md" onClick={() => void save()} disabled={saving}>
+              {saving ? "Saving…" : "Save sale"}
             </Button>
-            <Button size="md" onClick={close}>
+            <Button size="md" onClick={close} disabled={saving}>
               Cancel
             </Button>
           </div>
@@ -144,7 +177,6 @@ export function PlotSalesCard({
       ) : (
         <p className="text-xs text-muted">Add the plot sizes above first.</p>
       )}
-      <p className="mt-3 text-xs text-muted">Plot sales aren&apos;t saved to the server yet.</p>
     </Card>
   );
 }
