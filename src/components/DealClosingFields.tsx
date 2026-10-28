@@ -13,6 +13,7 @@ export function DealClosingFields({
   errors,
   dealType,
   hideCounterparty = false,
+  feeRate = FEE_RATE,
 }: {
   value: ClosingDraft;
   onChange: (next: ClosingDraft) => void;
@@ -20,11 +21,14 @@ export function DealClosingFields({
   dealType: "jv" | "sale";
   /** True when the buyer is picked separately (e.g. from the members), so their name, email and phone aren't asked here. */
   hideCounterparty?: boolean;
+  /** The fee rate for the suggestion (0.1 = 10%); an estate's own rate for its plot sales. */
+  feeRate?: number;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState("");
   const set = <K extends keyof ClosingDraft>(key: K, next: ClosingDraft[K]) => onChange({ ...value, [key]: next });
-  const suggestedFee = Math.round((Number(value.finalAmount) || 0) * FEE_RATE);
+  const suggestedFee = Math.round((Number(value.finalAmount) || 0) * feeRate);
+  const feePercent = Math.round(feeRate * 10000) / 100;
 
   const addFiles = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -64,7 +68,7 @@ export function DealClosingFields({
           </Field>
         </>
       )}
-      <Field label="Facilitation fee (₦)" hint={suggestedFee ? `10% of the agreed amount is ${formatNaira(suggestedFee)}.` : "10% of the agreed amount."}>
+      <Field label="Facilitation fee (₦)" hint={suggestedFee ? `${feePercent}% of the agreed amount is ${formatNaira(suggestedFee)}.` : `${feePercent}% of the agreed amount.`}>
         <MoneyInput value={value.facilitationFee} onChange={(digits) => set("facilitationFee", digits)} />
       </Field>
 

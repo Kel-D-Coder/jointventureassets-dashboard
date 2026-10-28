@@ -16,6 +16,7 @@ export type CheckedField =
   | "images"
   | "titleDocument"
   | "plotOptions"
+  | "estateFeePercent"
   | "proposal"
   | "sharingNegotiable"
   | "premium"

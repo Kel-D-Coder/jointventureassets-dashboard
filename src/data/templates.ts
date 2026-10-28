@@ -14,8 +14,11 @@ export interface TemplateField {
   key: string;
   label: string;
   group: string;
-  /** "image" is an uploaded picture (e.g. a letterhead), stored as a data URL. */
-  kind?: "text" | "date" | "textarea" | "image";
+  /**
+   * "image" is an uploaded picture (e.g. a letterhead), stored as a data URL. "number" is an amount
+   * or size typed as digits and kept with comma separators ("1,000,000"), as the document shows it.
+   */
+  kind?: "text" | "date" | "textarea" | "image" | "number";
   hint?: string;
   /** Starting value. "today" becomes today's date. */
   defaultValue?: string;
@@ -156,25 +159,25 @@ export const documentTemplates: DocumentTemplate[] = [
 
       { key: "propertyAddress", label: "Property address", group: "Property" },
       { key: "propertyLocation", label: "Property location", group: "Property", fromListing: location },
-      { key: "landSize", label: "Land size (sqm)", group: "Property", fromListing: (l) => (l.sizeSqm > 0 ? l.sizeSqm.toLocaleString("en-NG") : "") },
+      { key: "landSize", label: "Land size (sqm)", group: "Property", kind: "number", fromListing: (l) => (l.sizeSqm > 0 ? l.sizeSqm.toLocaleString("en-NG") : "") },
       { key: "titleDocument", label: "Title document", group: "Property", fromListing: (l) => l.titleDocument },
       { key: "surveyNumber", label: "Survey plan number", group: "Property", optional: true },
-      { key: "landValue", label: "Land value (₦)", group: "Property", hint: "Numbers only; ₦ is added", fromListing: (l) => (isLandValueTbd(l) ? "" : l.price.toLocaleString("en-NG")) },
+      { key: "landValue", label: "Land value (₦)", group: "Property", kind: "number", hint: "Numbers only; ₦ is added", fromListing: (l) => (isLandValueTbd(l) ? "" : l.price.toLocaleString("en-NG")) },
       { key: "propertyDescription", label: "Property description", group: "Property", kind: "textarea", fromListing: (l) => l.description },
 
       { key: "projectType", label: "Project type", group: "Proposed development", hint: "Residential, Commercial or Mixed-use" },
       { key: "projectDescription", label: "Project description", group: "Proposed development", kind: "textarea", fromListing: (l) => l.jv?.proposal ?? "" },
-      { key: "numberOfUnits", label: "Estimated number of units", group: "Proposed development" },
+      { key: "numberOfUnits", label: "Estimated number of units", group: "Proposed development", kind: "number" },
       { key: "developmentPeriod", label: "Estimated development period", group: "Proposed development", hint: "e.g. 24 months", fromListing: (l) => l.jv?.duration ?? "" },
 
       { key: "landownerShare", label: "Option A: landowner share (%)", group: "Sharing arrangement", optional: true, hint: "Fill the option(s) you're proposing; the rest print as blank lines", fromListing: (l) => l.jv?.sharingFormula.split("/")[0] ?? "" },
       { key: "developerShare", label: "Option A: developer share (%)", group: "Sharing arrangement", optional: true, fromListing: (l) => l.jv?.sharingFormula.split("/")[1] ?? "" },
-      { key: "landownerUnits", label: "Option B: number of units for the landowner", group: "Sharing arrangement", optional: true },
+      { key: "landownerUnits", label: "Option B: number of units for the landowner", group: "Sharing arrangement", kind: "number", optional: true },
       { key: "unitType", label: "Option B: unit type", group: "Sharing arrangement", optional: true, hint: "e.g. 3-bedroom flats" },
       { key: "hybridDetails", label: "Option C: hybrid structure details", group: "Sharing arrangement", kind: "textarea", optional: true },
 
-      { key: "estimatedGdv", label: "Estimated GDV (₦)", group: "Schedule A: project summary", optional: true, hint: "Gross development value" },
-      { key: "estimatedCost", label: "Estimated project cost (₦)", group: "Schedule A: project summary", optional: true },
+      { key: "estimatedGdv", label: "Estimated GDV (₦)", group: "Schedule A: project summary", kind: "number", optional: true, hint: "Gross development value" },
+      { key: "estimatedCost", label: "Estimated project cost (₦)", group: "Schedule A: project summary", kind: "number", optional: true },
       { key: "sharingRatio", label: "Proposed sharing ratio", group: "Schedule A: project summary", hint: "Landowner / developer, e.g. 40/60", fromListing: (l) => l.jv?.sharingFormula ?? "" },
     ],
     blocks: [

@@ -7,7 +7,7 @@ import { useResource } from "@/hooks/useResource";
 import { TemplatePreview } from "@/components/TemplatePreview";
 import { SendForSignatureDialog, type SentRecord } from "@/components/SendForSignatureDialog";
 import { readLetterhead } from "@/lib/image";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, withCommas } from "@/lib/format";
 import { downloadBlob, emptyFields, fileName, initialValues, type TemplateValues } from "@/lib/templates";
 import { readStored, writeStored } from "@/lib/storage";
 import { Button, Card, Field, Notice, PageHeader, Pill, inputClass } from "@/ui";
@@ -207,6 +207,13 @@ function TemplateEditor({ template }: { template: DocumentTemplate }) {
                   <Field key={field.key} label={field.label} hint={field.hint}>
                     {field.kind === "image" ? (
                       <ImageField value={values[field.key] ?? ""} onChange={(value) => set(field.key, value)} />
+                    ) : field.kind === "number" ? (
+                      <input
+                        inputMode="numeric"
+                        value={values[field.key] ?? ""}
+                        onChange={(event) => set(field.key, withCommas(event.target.value.replace(/[^\d]/g, "")))}
+                        className={inputClass}
+                      />
                     ) : field.kind === "textarea" ? (
                       <textarea rows={3} value={values[field.key] ?? ""} onChange={(event) => set(field.key, event.target.value)} className={inputClass} />
                     ) : (

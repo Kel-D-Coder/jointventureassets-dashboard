@@ -198,3 +198,22 @@ export function readPlotOptions(raw: unknown): PlotOption[] | undefined {
     .sort((a, b) => a.price - b.price || a.sizeSqm - b.sizeSqm);
   return options.length ? options : undefined;
 }
+
+/** An estate sets its own facilitation fee to JVA, as a percentage of each plot's sale price, at least this. */
+export const MIN_ESTATE_FEE_PERCENT = 5;
+
+/** What's wrong with an estate's fee percentage, if anything. */
+export function estateFeeProblem(percent: string): string | undefined {
+  const value = Number(percent);
+  if (!percent.trim() || Number.isNaN(value)) return "Enter the facilitation fee for JVA, as a percentage.";
+  if (value < MIN_ESTATE_FEE_PERCENT) return `The facilitation fee can't be less than ${MIN_ESTATE_FEE_PERCENT}%.`;
+  if (value >= 100) return "Enter a percentage below 100.";
+  return undefined;
+}
+
+/** Digits and one decimal point, for a percentage field: "7.5". */
+export const percentDigits = (raw: string) => raw.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+
+/** A fee rate (0.075) as a percentage for display or editing ("7.5"). */
+export const ratePercent = (rate: number) => String(Math.round(rate * 10000) / 100);
+

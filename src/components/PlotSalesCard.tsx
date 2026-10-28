@@ -24,8 +24,11 @@ export function PlotSalesCard({
   sales,
   onRecord,
   onRemove,
+  feeRate,
 }: {
   listingId: string;
+  /** The estate's facilitation fee rate (0.05 = 5%), for the suggested fee; the standard rate when missing. */
+  feeRate?: number;
   /** The estate's plot sizes as currently entered. */
   plots: PlotOption[];
   sales: PlotSale[];
@@ -51,7 +54,9 @@ export function PlotSalesCard({
     setPlotError("");
     const plot = plots.find((option) => option.sizeSqm === size);
     // Start from that plot's price; the date and documents stay as entered.
-    setDraft((current) => ({ ...closingDraft(undefined, plot?.price ?? 0), closedAt: current.closedAt, documents: current.documents, notes: current.notes }));
+    const fresh = closingDraft(undefined, plot?.price ?? 0);
+    if (feeRate !== undefined && plot) fresh.facilitationFee = String(Math.round(plot.price * feeRate));
+    setDraft((current) => ({ ...fresh, closedAt: current.closedAt, documents: current.documents, notes: current.notes }));
   };
 
   const close = () => {
@@ -160,7 +165,7 @@ export function PlotSalesCard({
             />
           </fieldset>
 
-          <DealClosingFields value={draft} onChange={setDraft} errors={errors} dealType="sale" hideCounterparty />
+          <DealClosingFields value={draft} onChange={setDraft} errors={errors} dealType="sale" hideCounterparty feeRate={feeRate} />
           <div className="flex flex-wrap gap-2">
             <Button tone="gold" size="md" onClick={() => void save()} disabled={saving}>
               {saving ? "Saving…" : "Save sale"}

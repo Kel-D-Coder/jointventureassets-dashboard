@@ -18,7 +18,7 @@ import { SupportingDocuments } from "@/components/SupportingDocuments";
 import { OwnerPicker } from "@/components/OwnerPicker";
 import { isLandValueTbd } from "@/data/labels";
 import { PlotOptionsEditor } from "@/components/PlotOptionsEditor";
-import { isEstate, plotOptionsFrom, plotRowsFrom, plotRowsProblem, type PlotRow } from "@/data/labels";
+import { MIN_ESTATE_FEE_PERCENT, estateFeeProblem, isEstate, percentDigits, plotOptionsFrom, plotRowsFrom, plotRowsProblem, ratePercent, type PlotRow } from "@/data/labels";
 import { PlotSalesCard } from "@/components/PlotSalesCard";
 import { ListingViewersCard } from "@/components/ListingViewersCard";
 
@@ -36,6 +36,8 @@ interface Draft {
   landValueTbd: boolean;
   /** Sale listings: an estate with several plot sizes, each with its own price (plotRows). */
   isEstate: boolean;
+  /** Estates: the facilitation fee to JVA, as a percentage (at least 5). */
+  estateFeePercent: string;
   plotRows: PlotRow[];
   /** Estates: plots sold so far. Each is saved to the server as it's recorded, not with the listing. */
   sales: PlotSale[];
@@ -60,6 +62,8 @@ interface Draft {
   ownerPhone: string;
   /** Listed under Joint Venture Assets: the actual owner's phone number, so the team can call them. Optional; saved as `ownerPhone`. */
   companyOwnerPhone: string;
+  /** Listed under Joint Venture Assets: the actual owner's name. Optional; saved as `ownerContactName`. */
+  companyOwnerName: string;
   /** Set when the owner was picked from the platform's members. */
   userId?: string;
   status: ListingStatus;
@@ -84,6 +88,7 @@ const emptyDraft: Draft = {
   price: "",
   landValueTbd: false,
   isEstate: false,
+  estateFeePercent: "",
   plotRows: plotRowsFrom(),
   sales: [],
   titleDocument: "C of O",
@@ -102,6 +107,7 @@ const emptyDraft: Draft = {
   ownerEmail: "",
   ownerPhone: "",
   companyOwnerPhone: "",
+  companyOwnerName: "",
   status: "draft",
   closing: closingDraft(),
   featured: false,
@@ -133,6 +139,7 @@ function draftFromListing(listing: Listing): Draft {
     price: listing.price ? String(listing.price) : "",
     landValueTbd: isLandValueTbd(listing),
     isEstate: isEstate(listing),
+    estateFeePercent: isEstate(listing) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
     plotRows: plotRowsFrom(listing.plotOptions),
     sales: listing.sales ?? [],
     titleDocument: listing.titleDocument,
@@ -150,6 +157,7 @@ function draftFromListing(listing: Listing): Draft {
     ownerPhone: isCompany ? "" : listing.ownerPhone ?? "",
     userId: listing.userId,
     companyOwnerPhone: isCompany ? listing.ownerPhone ?? "" : "",
+    companyOwnerName: isCompany ? listing.ownerContactName ?? "" : "",
     status: listing.status,
     closing: closingDraft(listing.closing, listing.price),
     featured: listing.featured,
@@ -174,6 +182,7 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     price: listing.price ? String(listing.price) : "",
     landValueTbd: Boolean(listing.landValueTbd),
     isEstate: isEstate(listing),
+    estateFeePercent: isEstate(listing) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
     plotRows: plotRowsFrom(listing.plotOptions),
     titleDocument: listing.titleDocument,
     description: listing.description,
@@ -251,9 +260,12 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     ownerName: draft.ownerMode === "company" ? COMPANY_OWNER : draft.ownerName.trim(),
     ownerEmail: draft.ownerMode === "company" ? undefined : draft.ownerEmail.trim() || undefined,
     ownerPhone: (draft.ownerMode === "company" ? draft.companyOwnerPhone : draft.ownerPhone).trim() || undefined,
+    ownerContactName: draft.ownerMode === "company" ? draft.companyOwnerName.trim() || undefined : undefined,
     userId: draft.ownerMode === "company" ? undefined : draft.userId,
     // An empty list clears plot sizes from a listing that's no longer an estate.
     plotOptions: plots,
+    // Estates: the seller's facilitation fee, at the rate entered.
+    saleTerms: estate && !estateFeeProblem(draft.estateFeePercent) ? { acceptedFeeTerms: true, feeRate: Number(draft.estateFeePercent) / 100 } : undefined,
     status,
     closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
@@ -389,6 +401,8 @@ export default function ListingEditorPage() {
     const plotProblem = estate ? plotRowsProblem(draft.plotRows) : undefined;
     const missing = missingFor(toInput(draft, status)).filter((check) => !(estate && ["sizeSqm", "price", "priceNegotiable"].includes(check.field)));
     if (plotProblem) missing.push({ field: "plotOptions", label: "Plot sizes", message: plotProblem, passes: () => false });
+    const feeProblem = estate ? estateFeeProblem(draft.estateFeePercent) : undefined;
+    if (feeProblem) missing.push({ field: "estateFeePercent", label: "Facilitation fee", message: feeProblem, passes: () => false });
     const closingProblemsNow = status === "closed" ? closingErrors(draft.closing) : {};
     setClosingProblems(closingProblemsNow);
     setErrors(Object.fromEntries(missing.map((check) => [check.field, check.message])));
@@ -511,6 +525,20 @@ export default function ListingEditorPage() {
               {draft.dealType === "sale" && draft.isEstate ? (
                 <div className="sm:col-span-2">
                   <PlotOptionsEditor rows={draft.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} />
+                  <Field
+                    label="Facilitation fee to JVA (%)"
+                    error={errors.estateFeePercent}
+                    hint={`Required, at least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from each plot's sale price.`}
+                    className="mt-4 sm:max-w-xs"
+                  >
+                    <input
+                      inputMode="decimal"
+                      value={draft.estateFeePercent}
+                      onChange={(e) => set("estateFeePercent", percentDigits(e.target.value))}
+                      placeholder="e.g. 5"
+                      className={inputClass}
+                    />
+                  </Field>
                 </div>
               ) : (
                 <>
@@ -566,6 +594,7 @@ export default function ListingEditorPage() {
             <PlotSalesCard
               listingId={listingId}
               plots={plotOptionsFrom(draft.plotRows)}
+              feeRate={estateFeeProblem(draft.estateFeePercent) ? undefined : Number(draft.estateFeePercent) / 100}
               sales={draft.sales}
               onRecord={recordSale}
               onRemove={removeSale}
@@ -669,6 +698,16 @@ export default function ListingEditorPage() {
                   </label>
                 </div>
                 {draft.ownerMode === "company" ? (
+                  <Field label="Owner's name (optional)" hint="The person behind this listing, for the JVA team only." className="mt-3">
+                    <input
+                      value={draft.companyOwnerName}
+                      onChange={(e) => set("companyOwnerName", e.target.value)}
+                      placeholder="Person or company"
+                      className={inputClass}
+                    />
+                  </Field>
+                ) : null}
+                {draft.ownerMode === "company" ? (
                   <Field label="Owner's phone number (optional)" hint="For the JVA team only, so you can call the owner about this listing." className="mt-3">
                     <input
                       type="tel"
@@ -681,7 +720,7 @@ export default function ListingEditorPage() {
                 ) : null}
                 {draft.ownerMode === "company" && draft.companyOwnerPhone.trim() ? (
                   <a href={`tel:${draft.companyOwnerPhone.replace(/[^\d+]/g, "")}`} className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-deep hover:underline">
-                    <FaPhone aria-hidden="true" className="h-3 w-3" /> Call {draft.companyOwnerPhone.trim()}
+                    <FaPhone aria-hidden="true" className="h-3 w-3" /> Call {draft.companyOwnerName.trim() || draft.companyOwnerPhone.trim()}
                   </a>
                 ) : null}
                 {draft.ownerMode === "other" ? (

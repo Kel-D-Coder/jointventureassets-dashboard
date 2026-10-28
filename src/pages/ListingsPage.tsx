@@ -139,6 +139,7 @@ function ListingCard({ listing, enquiries }: { listing: Listing; enquiries: numb
         </p>
         <p className="mt-1 truncate text-xs text-muted">
           {listing.ownerName}
+          {listing.ownerContactName ? ` · ${listing.ownerContactName}` : ""}
           {listing.ownerPhone ? ` · ${listing.ownerPhone}` : ""}
         </p>
         <div className="mt-4 flex items-end justify-between gap-3 border-t border-fg/8 pt-4">

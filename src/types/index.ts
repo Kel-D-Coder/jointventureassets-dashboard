@@ -46,11 +46,15 @@ export interface Listing {
   /** The owner's contact details. Admin only; the website never shows them. */
   ownerEmail?: string;
   ownerPhone?: string;
+  /** Listed under Joint Venture Assets: the actual owner's name, for the JVA team only. */
+  ownerContactName?: string;
   status: ListingStatus;
   /** Sale listings: whether the asking price is negotiable. Missing on older listings. */
   priceNegotiable?: PriceNegotiable;
   /** Joint ventures: the land value is still to be determined (price is then 0). */
   landValueTbd?: boolean;
+  /** Sales: the facilitation fee the seller agreed to pay JVA. Estates set their own rate (at least 5%). */
+  saleTerms?: { acceptedFeeTerms: true; feeRate: number };
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
   /** Estates: the plots sold so far, oldest first. Recorded one at a time (api.plotSales), not saved with the listing. */
