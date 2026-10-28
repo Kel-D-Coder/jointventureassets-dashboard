@@ -501,9 +501,14 @@ const serverAccounts = {
     console.log(`[GET /admin/users/${id}] response:`, body);
     return toAccount(pickOne<ServerUser>(body, "user", "account"));
   },
-  setStatus: async (id: string, status: AccountStatus): Promise<MemberAccount> => {
-    console.log(`[PATCH /admin/users/${id}/status] sending:`, { status });
-    const body = await call<unknown>(`/admin/users/${path(id)}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+  /**
+   * PATCH /admin/users/{id}/status. The server emails the member: approved, reactivated or suspended.
+   * `note` (optional) goes in that email, e.g. the reason for a suspension.
+   */
+  setStatus: async (id: string, status: AccountStatus, note?: string): Promise<MemberAccount> => {
+    const payload = note?.trim() ? { status, note: note.trim() } : { status };
+    console.log(`[PATCH /admin/users/${id}/status] sending:`, payload);
+    const body = await call<unknown>(`/admin/users/${path(id)}/status`, { method: "PATCH", body: JSON.stringify(payload) });
     console.log(`[PATCH /admin/users/${id}/status] response:`, body);
     return toAccount(pickOne<ServerUser>(body, "user", "account"));
   },

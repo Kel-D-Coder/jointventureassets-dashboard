@@ -10,7 +10,7 @@ import { MemberActivity } from "@/components/MemberActivity";
 import { fullProfile } from "@/data/profileLabels";
 import { accountStatusLabel as statusLabel, accountStatusTone as statusTone } from "@/data/labels";
 import { cx, formatDateTime } from "@/lib/format";
-import { BackLink, Button, Card, CardTitle, Notice, Pill, SkeletonRows } from "@/ui";
+import { BackLink, Button, Card, CardTitle, Field, Notice, Pill, SkeletonRows, inputClass } from "@/ui";
 import type { AccountStatus, MemberAccount, SubmittedDocument } from "@/types";
 
 export default function MemberDetailPage() {
@@ -20,14 +20,17 @@ export default function MemberDetailPage() {
   const setStatus = useAction(accounts.setStatus, "Couldn't update this member.");
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  const change = async (target: MemberAccount, next: AccountStatus, text: string) => {
+  /** Returns whether the change was saved; failures show the server's message instead. */
+  const change = async (target: MemberAccount, next: AccountStatus, text: string, note?: string): Promise<boolean> => {
     try {
-      await setStatus.run(target.id, next);
+      await setStatus.run(target.id, next, note);
       forgetMembers();
       await reload();
       setNotice({ tone: "success", text });
+      return true;
     } catch (caught) {
       setNotice({ tone: "error", text: (caught as Error).message });
+      return false;
     }
   };
 
@@ -60,7 +63,7 @@ function MemberDetail({
 }: {
   member: MemberAccount;
   busy: boolean;
-  onChange: (member: MemberAccount, next: AccountStatus, text: string) => void;
+  onChange: (member: MemberAccount, next: AccountStatus, text: string, note?: string) => Promise<boolean>;
 }) {
   const answers = fullProfile(member.role, member.category, member.profile);
   const missingRequired = answers.filter((answer) => answer.required && !answer.value).length;
@@ -77,6 +80,24 @@ function MemberDetail({
   const uploaded = documentSlots.filter((slot): slot is { label: string; required: boolean; doc: SubmittedDocument } => Boolean(slot.doc));
   const missingCompanyProfile = isInvestor && !member.documents?.companyProfile;
   const canRemind = member.status === "pending" && (!member.profileCompleted || missingCompanyProfile);
+
+  // Suspending asks for an optional reason first; it goes in the email the member gets.
+  const [suspending, setSuspending] = useState(false);
+  const [reason, setReason] = useState("");
+  const firstName = member.fullName.split(" ")[0] || member.fullName;
+
+  const suspend = async () => {
+    const saved = await onChange(
+      member,
+      "suspended",
+      `${member.fullName} is suspended and has been signed out. We've emailed them${reason.trim() ? " the reason" : ""}.`,
+      reason,
+    );
+    // Kept open if it failed, so the reason isn't lost.
+    if (!saved) return;
+    setSuspending(false);
+    setReason("");
+  };
 
   const [reminding, setReminding] = useState(false);
   const [remindedAt, setRemindedAt] = useState<Date | null>(null);
@@ -124,13 +145,26 @@ function MemberDetail({
 
         <div className="mt-6 flex flex-wrap gap-2 border-t border-fg/8 pt-5">
           {member.status !== "active" ? (
-            <Button tone="solid" size="md" disabled={busy} onClick={() => onChange(member, "active", `${member.fullName} is approved and can use the platform.`)}>
+            <Button
+              tone="solid"
+              size="md"
+              disabled={busy}
+              onClick={() =>
+                onChange(
+                  member,
+                  "active",
+                  member.status === "suspended"
+                    ? `${member.fullName} is reactivated and can log in again. We've emailed them to let them know.`
+                    : `${member.fullName} is approved and can use the platform. We've emailed them to let them know.`,
+                )
+              }
+            >
               {member.status === "suspended" ? <FaRotateLeft aria-hidden="true" /> : <FaCheck aria-hidden="true" />}
               {member.status === "suspended" ? "Reactivate" : "Approve"}
             </Button>
           ) : null}
-          {member.status !== "suspended" ? (
-            <Button tone="danger" size="md" disabled={busy} onClick={() => onChange(member, "suspended", `${member.fullName} is suspended and can no longer log in.`)}>
+          {member.status !== "suspended" && !suspending ? (
+            <Button tone="danger" size="md" disabled={busy} onClick={() => setSuspending(true)}>
               <FaBan aria-hidden="true" /> Suspend
             </Button>
           ) : null}
@@ -140,6 +174,37 @@ function MemberDetail({
             </Button>
           ) : null}
         </div>
+        {suspending ? (
+          <div className="mt-4 space-y-3 rounded-lg border border-danger/25 bg-danger/[0.04] p-4">
+            <p className="text-sm text-fg">
+              Suspend <strong>{member.fullName}</strong>? They&apos;ll be signed out straight away and can&apos;t log in until you reactivate them.
+            </p>
+            <Field label="Reason (optional)" hint={`Included in the email we send ${firstName}.`}>
+              <textarea
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                rows={3}
+                placeholder="e.g. We received reports of misleading listing details."
+                className={inputClass}
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              <Button tone="danger" size="md" disabled={busy} onClick={() => void suspend()}>
+                <FaBan aria-hidden="true" /> {busy ? "Suspending…" : "Suspend member"}
+              </Button>
+              <Button
+                size="md"
+                disabled={busy}
+                onClick={() => {
+                  setSuspending(false);
+                  setReason("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {canRemind ? (
           <p className="mt-3 text-xs text-muted">
             {remindedAt
