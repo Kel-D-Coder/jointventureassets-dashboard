@@ -57,6 +57,10 @@ export interface Listing {
   saleTerms?: { acceptedFeeTerms: true; feeRate: number };
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
+  /** Estates: "plots" (plots of land) or "units" (houses / apartments). */
+  estateType?: "plots" | "units";
+  /** Estates: how buyers can pay. */
+  paymentPlan?: PaymentPlan;
   /** Estates: the plots sold so far, oldest first. Recorded one at a time (api.plotSales), not saved with the listing. */
   sales?: PlotSale[];
   featured: boolean;
@@ -168,6 +172,9 @@ export type PriceNegotiable = "negotiable" | "slightly_negotiable" | "fixed";
  * how negotiable that price is, and the optional initial deposit.
  */
 export interface PlotOption {
+  /** Houses / apartments: the unit type, e.g. "2 Bedroom Apartment + BQ". Missing for plots of land. */
+  label?: string;
+  /** Plots: the plot size. Units: optional (0 when not given). */
   sizeSqm: number;
   /** Naira. */
   price: number;
@@ -185,4 +192,16 @@ export interface PlotSale extends DealClosing {
   plotSizeSqm: number;
   /** The buyer's member account, when they were picked from the platform's members. */
   buyerUserId?: string;
+  /** Houses / apartments: the unit type sold, e.g. "3 Bedroom Apartment + BQ". */
+  label?: string;
+}
+
+/** How a buyer can pay for an estate plot or unit; every part is optional. */
+export interface PaymentPlan {
+  /** Naira. */
+  initialDeposit?: number;
+  interestFreeMonths?: number;
+  /** The longest payment plan, in months. */
+  maxMonths?: number;
+  notes?: string;
 }

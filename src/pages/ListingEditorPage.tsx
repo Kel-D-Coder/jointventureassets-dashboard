@@ -18,7 +18,23 @@ import { SupportingDocuments } from "@/components/SupportingDocuments";
 import { OwnerPicker } from "@/components/OwnerPicker";
 import { isLandValueTbd } from "@/data/labels";
 import { PlotOptionsEditor } from "@/components/PlotOptionsEditor";
-import { MIN_ESTATE_FEE_PERCENT, estateFeeProblem, isEstate, percentDigits, plotOptionsFrom, plotRowsFrom, plotRowsProblem, ratePercent, type PlotRow } from "@/data/labels";
+import {
+  MIN_ESTATE_FEE_PERCENT,
+  estateFeeProblem,
+  estateKind,
+  isEstate,
+  paymentPlanDraftFrom,
+  paymentPlanFrom,
+  percentDigits,
+  plotOptionsFrom,
+  plotRowsFrom,
+  plotRowsProblem,
+  ratePercent,
+  type EstateKind,
+  type PaymentPlanDraft,
+  type PlotRow,
+} from "@/data/labels";
+import { PaymentPlanFields } from "@/components/PaymentPlanFields";
 import { PlotSalesCard } from "@/components/PlotSalesCard";
 import { ListingViewersCard } from "@/components/ListingViewersCard";
 
@@ -34,8 +50,12 @@ interface Draft {
   price: string;
   /** Joint ventures: land value to be determined. */
   landValueTbd: boolean;
-  /** Sale listings: an estate with several plot sizes, each with its own price (plotRows). */
+  /** Sale listings: an estate with several plot sizes or unit types, each with its own price (plotRows). */
   isEstate: boolean;
+  /** Plots of land, or houses / apartments by unit type. */
+  estateType: EstateKind;
+  /** Estates: how buyers can pay (all optional). */
+  paymentPlan: PaymentPlanDraft;
   /** Estates: the facilitation fee to JVA, as a percentage (at least 5). */
   estateFeePercent: string;
   plotRows: PlotRow[];
@@ -88,6 +108,8 @@ const emptyDraft: Draft = {
   price: "",
   landValueTbd: false,
   isEstate: false,
+  estateType: "plots",
+  paymentPlan: paymentPlanDraftFrom(),
   estateFeePercent: "",
   plotRows: plotRowsFrom(),
   sales: [],
@@ -139,6 +161,8 @@ function draftFromListing(listing: Listing): Draft {
     price: listing.price ? String(listing.price) : "",
     landValueTbd: isLandValueTbd(listing),
     isEstate: isEstate(listing),
+    estateType: estateKind(listing),
+    paymentPlan: paymentPlanDraftFrom(listing.paymentPlan),
     estateFeePercent: isEstate(listing) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
     plotRows: plotRowsFrom(listing.plotOptions),
     sales: listing.sales ?? [],
@@ -182,6 +206,8 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     price: listing.price ? String(listing.price) : "",
     landValueTbd: Boolean(listing.landValueTbd),
     isEstate: isEstate(listing),
+    estateType: estateKind(listing),
+    paymentPlan: paymentPlanDraftFrom(listing.paymentPlan),
     estateFeePercent: isEstate(listing) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
     plotRows: plotRowsFrom(listing.plotOptions),
     titleDocument: listing.titleDocument,
@@ -228,7 +254,7 @@ function draftFromRequest(request: PartnerRequest): Draft {
 function toInput(draft: Draft, status: ListingStatus): ListingInput {
   const estate = draft.dealType === "sale" && draft.isEstate;
   // Cheapest first; the cheapest also fills the usual size, price and negotiable fields.
-  const plots = estate ? plotOptionsFrom(draft.plotRows) : [];
+  const plots = estate ? plotOptionsFrom(draft.plotRows, draft.estateType) : [];
   const cheapest = plots[0];
   return {
     title: draft.title.trim(),
@@ -264,6 +290,8 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     userId: draft.ownerMode === "company" ? undefined : draft.userId,
     // An empty list clears plot sizes from a listing that's no longer an estate.
     plotOptions: plots,
+    estateType: estate ? draft.estateType : undefined,
+    paymentPlan: estate ? paymentPlanFrom(draft.paymentPlan) : undefined,
     // Estates: the seller's facilitation fee, at the rate entered.
     saleTerms: estate && !estateFeeProblem(draft.estateFeePercent) ? { acceptedFeeTerms: true, feeRate: Number(draft.estateFeePercent) / 100 } : undefined,
     status,
@@ -398,9 +426,9 @@ export default function ListingEditorPage() {
     event.preventDefault();
     const status = isDraft ? "published" : draft.status;
     const estate = draft.dealType === "sale" && draft.isEstate;
-    const plotProblem = estate ? plotRowsProblem(draft.plotRows) : undefined;
+    const plotProblem = estate ? plotRowsProblem(draft.plotRows, draft.estateType) : undefined;
     const missing = missingFor(toInput(draft, status)).filter((check) => !(estate && ["sizeSqm", "price", "priceNegotiable"].includes(check.field)));
-    if (plotProblem) missing.push({ field: "plotOptions", label: "Plot sizes", message: plotProblem, passes: () => false });
+    if (plotProblem) missing.push({ field: "plotOptions", label: draft.estateType === "units" ? "Unit types" : "Plot sizes", message: plotProblem, passes: () => false });
     const feeProblem = estate ? estateFeeProblem(draft.estateFeePercent) : undefined;
     if (feeProblem) missing.push({ field: "estateFeePercent", label: "Facilitation fee", message: feeProblem, passes: () => false });
     const closingProblemsNow = status === "closed" ? closingErrors(draft.closing) : {};
@@ -517,18 +545,29 @@ export default function ListingEditorPage() {
                 <label className="flex items-center gap-2.5 rounded-lg border border-fg/15 px-3 py-2.5 text-sm text-fg sm:col-span-2 has-checked:border-gold has-checked:bg-gold-soft/40">
                   <input type="checkbox" checked={draft.isEstate} onChange={(e) => set("isEstate", e.target.checked)} className="h-4 w-4 accent-[#c9a24a]" />
                   <span>
-                    <span className="font-semibold">This is an estate with several plot sizes</span>
-                    <span className="block text-xs text-muted">Each plot size gets its own price, negotiable option and initial deposit.</span>
+                    <span className="font-semibold">This is an estate with several plot sizes or unit types</span>
+                    <span className="block text-xs text-muted">Each plot size, or each house / apartment type, gets its own price and negotiable option.</span>
                   </span>
                 </label>
               ) : null}
               {draft.dealType === "sale" && draft.isEstate ? (
                 <div className="sm:col-span-2">
-                  <PlotOptionsEditor rows={draft.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} />
+                  <Tabs
+                    label="What the estate sells"
+                    value={draft.estateType}
+                    onChange={(value) => set("estateType", value)}
+                    options={[
+                      { value: "plots", label: "Plots of land" },
+                      { value: "units", label: "Houses / apartments" },
+                    ]}
+                  />
+                  <div className="mt-4">
+                    <PlotOptionsEditor rows={draft.plotRows} onChange={(rows) => set("plotRows", rows)} error={errors.plotOptions} kind={draft.estateType} />
+                  </div>
                   <Field
                     label="Facilitation fee to JVA (%)"
                     error={errors.estateFeePercent}
-                    hint={`Required, at least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from each plot's sale price.`}
+                    hint={`Required, at least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA from each ${draft.estateType === "units" ? "unit" : "plot"}'s sale price.`}
                     className="mt-4 sm:max-w-xs"
                   >
                     <input
@@ -539,6 +578,9 @@ export default function ListingEditorPage() {
                       className={inputClass}
                     />
                   </Field>
+                  <div className="mt-4">
+                    <PaymentPlanFields value={draft.paymentPlan} onChange={(plan) => set("paymentPlan", plan)} />
+                  </div>
                 </div>
               ) : (
                 <>
@@ -593,7 +635,8 @@ export default function ListingEditorPage() {
           {listingId && draft.dealType === "sale" && draft.isEstate ? (
             <PlotSalesCard
               listingId={listingId}
-              plots={plotOptionsFrom(draft.plotRows)}
+              plots={plotOptionsFrom(draft.plotRows, draft.estateType)}
+              kind={draft.estateType}
               feeRate={estateFeeProblem(draft.estateFeePercent) ? undefined : Number(draft.estateFeePercent) / 100}
               sales={draft.sales}
               onRecord={recordSale}

@@ -63,6 +63,7 @@ export const titleDocuments: Option[] = [
   { value: "deed_of_assignment", label: "Deed of Assignment" },
   { value: "excision", label: "Excision" },
   { value: "gazzette", label: "Gazette" },
+  { value: "government_allocation", label: "Government allocation" },
   { value: "reg_survey", label: "Registered Survey" },
   { value: "any", label: "Any verified title" },
 ];
@@ -74,7 +75,7 @@ export const sharingFormulas: Option[] = [
   { value: "60_40", label: "60% / 40%" },
   { value: "open", label: "Open to discussion" },
 ];
-export const paymentMethods: Option[] = ["Outright payment", "Instalments", "Mortgage", "Not sure yet"].map((value) => ({ value, label: value }));
+export const paymentMethods: Option[] = ["Outright payment", "Installments", "Mortgage", "Not sure yet"].map((value) => ({ value, label: value }));
 
 /** The label for a stored value, or the value itself for older free-text answers. */
 export function labelOf(options: Option[], value?: string): string {

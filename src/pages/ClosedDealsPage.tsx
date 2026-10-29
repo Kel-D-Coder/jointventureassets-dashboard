@@ -5,11 +5,12 @@ import { listings } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { PersonLink } from "@/components/PersonLink";
 import { DealTypePill } from "@/components/StatusPills";
-import { cx, formatDate, formatNairaShort, formatSize } from "@/lib/format";
+import { cx, formatDate, formatNairaShort } from "@/lib/format";
 import { EmptyState, Notice, PageHeader, Pill, RowLink, SkeletonRows, StatCard, Table, Tabs, inputClass } from "@/ui";
 import type { DealClosing, DealType, Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
 import { isEstate as hasPlotSizes } from "@/data/labels";
+import { saleName } from "@/data/labels";
 
 /** An estate: a sale listing with several plot sizes, sold plot by plot. */
 const isEstate = (listing: Listing) => listing.dealType === "sale" && hasPlotSizes(listing);
@@ -36,7 +37,7 @@ async function loadDeals() {
   const plotSales: DealRow[] = all.flatMap((listing) =>
     (listing.sales ?? []).map((sale) => ({
       ...listing,
-      title: `${listing.title}: ${formatSize(sale.plotSizeSqm)} plot`,
+      title: `${listing.title}: ${saleName(sale)}`,
       closing: sale,
       sizeSqm: sale.plotSizeSqm,
       rowKey: `${listing.id}-${sale.id}`,

@@ -106,7 +106,7 @@ export default function RequestDetailPage() {
                 <Detail label="Premium">{request.premium > 0 ? `Up to ${formatNaira(request.premium)}` : "No premium"}</Detail>
               ) : null}
               {request.titleDocument ? <Detail label="Title accepted">{labelOf(titleDocuments, request.titleDocument)}</Detail> : null}
-              {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod}</Detail> : null}
+              {request.paymentMethod ? <Detail label="Payment">{request.paymentMethod === "Instalments" ? "Installments" : request.paymentMethod}</Detail> : null}
               <Detail label="Last updated">{formatDateTime(request.updatedAt)}</Detail>
             </dl>
           </Card>

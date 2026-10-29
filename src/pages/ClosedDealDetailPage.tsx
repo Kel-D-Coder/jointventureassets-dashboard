@@ -12,6 +12,7 @@ import { BackLink, Card, CardTitle, Notice, PageHeader, Pill, SkeletonRows } fro
 import type { DealClosing, Listing } from "@/types";
 import { coverOf } from "@/lib/videoWatermark";
 import { isLandValueTbd, sharingFormulaLabel, SHARING_TBD } from "@/data/labels";
+import { saleName } from "@/data/labels";
 
 type ClosedListing = Listing & { closing: DealClosing };
 
@@ -44,10 +45,10 @@ export default function ClosedDealDetailPage() {
         </div>
       );
     }
-    const plot = listing.plotOptions?.find((option) => option.sizeSqm === sale.plotSizeSqm);
+    const plot = listing.plotOptions?.find((option) => (sale.label ? option.label === sale.label : option.sizeSqm === sale.plotSizeSqm));
     const deal: ClosedListing = {
       ...listing,
-      title: `${listing.title}: ${formatSize(sale.plotSizeSqm)} plot`,
+      title: `${listing.title}: ${saleName(sale)}`,
       sizeSqm: sale.plotSizeSqm,
       price: plot?.price ?? 0,
       closing: sale,

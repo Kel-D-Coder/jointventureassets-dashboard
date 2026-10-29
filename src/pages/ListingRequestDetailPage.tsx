@@ -7,7 +7,7 @@ import { PersonLink } from "@/components/PersonLink";
 import { listingSubmissions } from "@/lib/api";
 import { useAction, useResource } from "@/hooks/useResource";
 import { DealTypePill } from "@/components/StatusPills";
-import { isEstate, priceNegotiableLabel, priceText, propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone, SHARING_TBD } from "@/data/labels";
+import { estateKind, isEstate, paymentPlanParts, priceNegotiableLabel, priceText, propertyTypeLabel, submissionStatusLabel as statusLabel, submissionStatusTone as statusTone, SHARING_TBD } from "@/data/labels";
 import { cx, formatDateTime, formatNaira, formatSize, negotiableText, premiumText } from "@/lib/format";
 import { BackLink, Button, Card, CardTitle, DeleteButton, Field, Notice, PageHeader, Pill, SkeletonRows, inputClass } from "@/ui";
 import type { ListingSubmission, SubmittedDocument } from "@/types";
@@ -179,12 +179,12 @@ function SubmissionDetail({
 
         {isEstate(listing) ? (
           <div className="mt-5">
-            <p className="label mb-2 text-muted">Plot sizes &amp; prices</p>
+            <p className="label mb-2 text-muted">{estateKind(listing) === "units" ? "Unit types & prices" : "Plot sizes & prices"}</p>
             <div className="overflow-x-auto rounded-lg border border-fg/10">
               <table className="w-full min-w-md text-left text-sm">
                 <thead className="bg-surface/70 text-xs text-muted">
                   <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:font-semibold">
-                    <th>Plot size</th>
+                    <th>{estateKind(listing) === "units" ? "Unit type" : "Plot size"}</th>
                     <th>Price</th>
                     <th>Negotiable</th>
                     <th>Initial deposit</th>
@@ -193,7 +193,7 @@ function SubmissionDetail({
                 <tbody className="divide-y divide-fg/8 [&_td]:px-3 [&_td]:py-2">
                   {listing.plotOptions!.map((option, index) => (
                     <tr key={index}>
-                      <td className="font-semibold text-fg">{formatSize(option.sizeSqm)}</td>
+                      <td className="font-semibold text-fg">{option.label ? `${option.label}${option.sizeSqm ? ` (${formatSize(option.sizeSqm)})` : ""}` : formatSize(option.sizeSqm)}</td>
                       <td className="tabular-nums">{formatNaira(option.price)}</td>
                       <td>{option.priceNegotiable ? priceNegotiableLabel[option.priceNegotiable] : "Not stated"}</td>
                       <td className="tabular-nums">{option.deposit ? formatNaira(option.deposit) : "None"}</td>
@@ -202,6 +202,11 @@ function SubmissionDetail({
                 </tbody>
               </table>
             </div>
+            {paymentPlanParts(listing.paymentPlan).length || listing.paymentPlan?.notes ? (
+              <p className="mt-3 text-sm text-fg">
+                <strong>Payment plan:</strong> {[...paymentPlanParts(listing.paymentPlan), listing.paymentPlan?.notes ?? ""].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

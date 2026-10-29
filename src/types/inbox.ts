@@ -2,7 +2,7 @@
  * Records shared with the website through its demo inbox (/api/demo-inbox).
  * The website keeps the original in lib/inbox/types.ts; change both together.
  */
-import type { DealType, PlotOption, PropertyType } from "@/types";
+import type { DealType, PaymentPlan, PlotOption, PropertyType } from "@/types";
 
 export type EnquiryStatus = "new" | "contacted" | "closed";
 
@@ -79,6 +79,10 @@ export interface SubmittedListing {
   landValueTbd?: boolean;
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
+  /** Estates: "plots" (plots of land) or "units" (houses / apartments). */
+  estateType?: "plots" | "units";
+  /** Estates: how buyers can pay. */
+  paymentPlan?: PaymentPlan;
 }
 
 /** A visitor asking for their property to be listed. Reviewed in the dashboard's "Listing requests". */

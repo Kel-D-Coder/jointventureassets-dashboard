@@ -5,15 +5,16 @@ import { DealClosingFields } from "@/components/DealClosingFields";
 import { OwnerPicker, type OwnerValue } from "@/components/OwnerPicker";
 import { PersonLink } from "@/components/PersonLink";
 import { closingDraft, closingErrors, toClosing, type ClosingDraft, type ClosingErrors } from "@/lib/closing";
-import { formatDate, formatNaira, formatNairaShort, formatSize } from "@/lib/format";
+import { formatDate, formatNaira, formatNairaShort } from "@/lib/format";
 import type { PlotSaleInput } from "@/lib/api";
 import { Button, Card, CardTitle, DeleteButton, Field, Notice, inputClass } from "@/ui";
 import type { PlotOption, PlotSale } from "@/types";
+import { optionName, saleName, type EstateKind } from "@/data/labels";
 
 const noBuyer: OwnerValue = { userId: undefined, name: "", email: "", phone: "" };
 
 /**
- * An estate's plot sales: each plot is recorded as it sells, with the usual closing details, while
+ * An estate's sales: each plot, house or apartment is recorded as it sells, with the usual closing details, while
  * the estate stays live. The buyer is picked from the platform's members, like a listing's owner,
  * or typed in. Each sale is saved to the server straight away (not with the listing) and shows on
  * the Closed deals page.
@@ -25,8 +26,11 @@ export function PlotSalesCard({
   onRecord,
   onRemove,
   feeRate,
+  kind = "plots",
 }: {
   listingId: string;
+  /** Plots of land, or houses / apartments (each apartment is recorded as its own sale). */
+  kind?: EstateKind;
   /** The estate's facilitation fee rate (0.05 = 5%), for the suggested fee; the standard rate when missing. */
   feeRate?: number;
   /** The estate's plot sizes as currently entered. */
@@ -37,7 +41,9 @@ export function PlotSalesCard({
   onRemove: (sale: PlotSale) => Promise<void>;
 }) {
   const [recording, setRecording] = useState(false);
-  const [plotSize, setPlotSize] = useState<number | null>(null);
+  // The chosen option, by its place in the list (unit types may share a size, or have none).
+  const [plotIndex, setPlotIndex] = useState<number | null>(null);
+  const units = kind === "units";
   const [buyer, setBuyer] = useState<OwnerValue>(noBuyer);
   const [draft, setDraft] = useState<ClosingDraft>(() => closingDraft());
   const [errors, setErrors] = useState<ClosingErrors>({});
@@ -49,10 +55,10 @@ export function PlotSalesCard({
   const total = sales.reduce((sum, sale) => sum + sale.finalAmount, 0);
   const fees = sales.reduce((sum, sale) => sum + sale.facilitationFee, 0);
 
-  const choosePlot = (size: number | null) => {
-    setPlotSize(size);
+  const choosePlot = (index: number | null) => {
+    setPlotIndex(index);
     setPlotError("");
-    const plot = plots.find((option) => option.sizeSqm === size);
+    const plot = index === null ? undefined : plots[index];
     // Start from that plot's price; the date and documents stay as entered.
     const fresh = closingDraft(undefined, plot?.price ?? 0);
     if (feeRate !== undefined && plot) fresh.facilitationFee = String(Math.round(plot.price * feeRate));
@@ -61,7 +67,7 @@ export function PlotSalesCard({
 
   const close = () => {
     setRecording(false);
-    setPlotSize(null);
+    setPlotIndex(null);
     setBuyer(noBuyer);
     setDraft(closingDraft());
     setErrors({});
@@ -73,14 +79,15 @@ export function PlotSalesCard({
   const save = async () => {
     const problems = closingErrors(draft);
     setErrors(problems);
-    setPlotError(plotSize === null ? "Choose which plot size was sold." : "");
+    setPlotError(plotIndex === null ? (units ? "Choose which unit type was sold." : "Choose which plot size was sold.") : "");
     setBuyerError(buyer.name.trim() ? "" : "Choose the buyer from the members, or enter their name.");
-    if (plotSize === null || !buyer.name.trim() || Object.keys(problems).length) return;
+    const plot = plotIndex === null ? undefined : plots[plotIndex];
+    if (!plot || !buyer.name.trim() || Object.keys(problems).length) return;
     const closing = toClosing({ ...draft, name: buyer.name, email: buyer.email, phone: buyer.phone });
     setSaving(true);
     setProblem("");
     try {
-      await onRecord({ ...closing, plotSizeSqm: plotSize, buyerUserId: buyer.userId });
+      await onRecord({ ...closing, plotSizeSqm: plot.sizeSqm, label: plot.label, buyerUserId: buyer.userId });
       close();
     } catch (caught) {
       setProblem((caught as Error).message);
@@ -100,12 +107,12 @@ export function PlotSalesCard({
 
   return (
     <Card>
-      <CardTitle hint="Record each plot as it sells. The estate stays live, and each sale shows on Closed deals.">Plot sales</CardTitle>
+      <CardTitle hint={`Record each ${units ? "unit" : "plot"} as it sells. The estate stays live, and each sale shows on Closed deals.`}>{units ? "Unit sales" : "Plot sales"}</CardTitle>
 
       {sales.length ? (
         <>
           <p className="mb-3 text-sm text-muted">
-            <strong className="text-fg">{sales.length}</strong> {sales.length === 1 ? "plot" : "plots"} sold · {formatNairaShort(total)} · fees {formatNairaShort(fees)}
+            <strong className="text-fg">{sales.length}</strong> {units ? (sales.length === 1 ? "unit" : "units") : sales.length === 1 ? "plot" : "plots"} sold · {formatNairaShort(total)} · fees {formatNairaShort(fees)}
           </p>
           <ul className="mb-4 divide-y divide-fg/8 rounded-lg border border-fg/10">
             {[...sales]
@@ -113,7 +120,7 @@ export function PlotSalesCard({
               .map((sale) => (
                 <li key={sale.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5 text-sm">
                   <Link to={`/closed-deals/${listingId}/sales/${sale.id}`} className="font-semibold text-fg hover:underline">
-                    {formatSize(sale.plotSizeSqm)} plot
+                    {saleName(sale)}
                   </Link>
                   <span className="min-w-0 flex-1 truncate text-muted">
                     {sale.counterparty.name ? (
@@ -130,7 +137,7 @@ export function PlotSalesCard({
           </ul>
         </>
       ) : (
-        <p className="mb-4 text-sm text-muted">No plots sold yet.</p>
+        <p className="mb-4 text-sm text-muted">{units ? "No units sold yet." : "No plots sold yet."}</p>
       )}
 
       {problem ? (
@@ -141,12 +148,12 @@ export function PlotSalesCard({
 
       {recording ? (
         <div className="space-y-4 rounded-lg border border-gold/30 bg-gold-soft/20 p-4">
-          <Field label="Plot size sold" error={plotError}>
-            <select value={plotSize ?? ""} onChange={(e) => choosePlot(e.target.value === "" ? null : Number(e.target.value))} className={inputClass}>
-              <option value="">Choose a plot size</option>
-              {plots.map((option) => (
-                <option key={option.sizeSqm} value={option.sizeSqm}>
-                  {formatSize(option.sizeSqm)}: {formatNaira(option.price)}
+          <Field label={units ? "Unit type sold" : "Plot size sold"} error={plotError}>
+            <select value={plotIndex ?? ""} onChange={(e) => choosePlot(e.target.value === "" ? null : Number(e.target.value))} className={inputClass}>
+              <option value="">{units ? "Choose a unit type" : "Choose a plot size"}</option>
+              {plots.map((option, index) => (
+                <option key={index} value={index}>
+                  {optionName(option)}: {formatNaira(option.price)}
                 </option>
               ))}
             </select>
@@ -177,10 +184,10 @@ export function PlotSalesCard({
         </div>
       ) : plots.length ? (
         <Button size="md" onClick={() => setRecording(true)}>
-          <FaPlus aria-hidden="true" /> Record a plot sale
+          <FaPlus aria-hidden="true" /> {units ? "Record a unit sale" : "Record a plot sale"}
         </Button>
       ) : (
-        <p className="text-xs text-muted">Add the plot sizes above first.</p>
+        <p className="text-xs text-muted">Add the plot sizes or unit types above first.</p>
       )}
     </Card>
   );

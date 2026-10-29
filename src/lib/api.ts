@@ -11,7 +11,7 @@
 import { demoEnquiries, demoMessages, demoSend } from "@/lib/demoApi";
 import { readStored, removeStored } from "@/lib/storage";
 import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
-import { readPlotOptions } from "@/data/labels";
+import { readPaymentPlan, readPlotOptions } from "@/data/labels";
 import type {
   AdminSession,
   ContactMessage,
@@ -172,10 +172,19 @@ const path = (id: string) => encodeURIComponent(id);
 
 type ServerSubmission = ListingSubmission & WithId;
 
+/** "plots" or "units" (houses / apartments); anything else is left unset. */
+const readEstateType = (raw: unknown) => (raw === "units" || raw === "plots" ? raw : undefined);
+
 const toSubmission = (submission: ServerSubmission): ListingSubmission => ({
   ...submission,
   // Listing titles are always shown in capitals.
-  listing: { ...submission.listing, title: (submission.listing?.title ?? "").toUpperCase(), plotOptions: readPlotOptions(submission.listing?.plotOptions) },
+  listing: {
+    ...submission.listing,
+    title: (submission.listing?.title ?? "").toUpperCase(),
+    plotOptions: readPlotOptions(submission.listing?.plotOptions),
+    estateType: readEstateType(submission.listing?.estateType),
+    paymentPlan: readPaymentPlan(submission.listing?.paymentPlan),
+  },
   id: idOf(submission),
   kind: "listing-submission",
   documents: submission.documents ?? [],
@@ -231,6 +240,8 @@ function toListing(listing: ServerListing): Listing {
     ...splitMedia(joinMedia(listing.images, listing.videos)),
     supportedDocuments: listing.supportedDocuments ?? [],
     plotOptions: readPlotOptions(listing.plotOptions),
+    estateType: readEstateType(listing.estateType),
+    paymentPlan: readPaymentPlan(listing.paymentPlan),
     userId: listing.userId ?? undefined,
     jv: listing.jv ?? undefined,
     ownerName: listing.ownerName ?? "",
@@ -253,6 +264,7 @@ function toSale(sale: ServerSale): PlotSale {
   return {
     id: idOf(sale),
     plotSizeSqm: Number(sale.plotSizeSqm) || 0,
+    label: typeof sale.label === "string" && sale.label ? sale.label : undefined,
     buyerUserId: sale.buyerUserId ?? undefined,
     closedAt: sale.closedAt ?? "",
     counterparty: {

@@ -1,12 +1,16 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { FaArrowRight } from "react-icons/fa6";
 import { listings, requests } from "@/lib/api";
 import { inboxEnquiries, listingSubmissions } from "@/lib/api";
 import { useResource } from "@/hooks/useResource";
 import { formatDate, formatNairaShort } from "@/lib/format";
-import { Card, CardTitle, Pill } from "@/ui";
+import { Button, Card, CardTitle, Pill } from "@/ui";
 import type { MemberAccount } from "@/types";
+
+/** Shown at first, newest first; "See more" adds this many again each time. */
+const FIRST = 5;
+const MORE = 10;
 
 interface ActivityRow {
   key: string;
@@ -68,6 +72,8 @@ async function loadActivity(member: MemberAccount): Promise<ActivityRow[]> {
 export function MemberActivity({ member }: { member: MemberAccount }) {
   const load = useCallback(() => loadActivity(member), [member]);
   const { data, loading } = useResource(load, "Couldn't load this member's activity.");
+  const [shown, setShown] = useState(FIRST);
+  const total = data?.length ?? 0;
 
   return (
     <Card>
@@ -77,8 +83,9 @@ export function MemberActivity({ member }: { member: MemberAccount }) {
       ) : !data?.length ? (
         <p className="text-sm text-muted">Nothing yet.</p>
       ) : (
+        <>
         <ul className="divide-y divide-fg/8">
-          {data.map((row) => (
+          {data.slice(0, shown).map((row) => (
             <li key={row.key + row.kind}>
               <Link to={row.to} className="group flex items-center gap-3 py-3">
                 <Pill>{row.kind}</Pill>
@@ -92,6 +99,22 @@ export function MemberActivity({ member }: { member: MemberAccount }) {
             </li>
           ))}
         </ul>
+        {total > FIRST ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-fg/8 pt-3">
+            <p className="text-xs text-muted">
+              Showing {Math.min(shown, total)} of {total}
+            </p>
+            <div className="ml-auto flex gap-2">
+              {shown < total ? (
+                <Button onClick={() => setShown((current) => current + MORE)}>
+                  See more ({Math.min(MORE, total - shown)})
+                </Button>
+              ) : null}
+              {shown > FIRST ? <Button onClick={() => setShown(FIRST)}>Show less</Button> : null}
+            </div>
+          </div>
+        ) : null}
+        </>
       )}
     </Card>
   );
