@@ -38,7 +38,7 @@ export default function ClosedDealDetailPage() {
       return (
         <div className="space-y-6">
           {back}
-          <Notice tone="error">This plot sale wasn't found. It may have been removed.</Notice>
+          <Notice tone="error">This sale wasn't found. It may have been removed.</Notice>
           <Link to={`/listings/${listing.id}`} className="text-sm font-semibold text-gold-deep hover:underline">
             Open the estate
           </Link>
@@ -46,6 +46,7 @@ export default function ClosedDealDetailPage() {
       );
     }
     const plot = listing.plotOptions?.find((option) => (sale.label ? option.label === sale.label : option.sizeSqm === sale.plotSizeSqm));
+    const unitSale = Boolean(sale.label);
     const deal: ClosedListing = {
       ...listing,
       title: `${listing.title}: ${saleName(sale)}`,
@@ -57,7 +58,7 @@ export default function ClosedDealDetailPage() {
       <div className="space-y-6">
         {back}
         <PageHeader
-          eyebrow={`Plot sale · ${listing.id.toUpperCase()}`}
+          eyebrow={`${unitSale ? "Unit sale" : "Plot sale"} · ${listing.id.toUpperCase()}`}
           title={deal.title}
           intro={
             <>
@@ -66,9 +67,9 @@ export default function ClosedDealDetailPage() {
               <span className="font-semibold text-fg">{formatNaira(sale.finalAmount)}</span>
             </>
           }
-          action={<Pill tone="gold">Plot sold</Pill>}
+          action={<Pill tone="gold">{unitSale ? "Unit sold" : "Plot sold"}</Pill>}
         />
-        <DealDetail deal={deal} plotSale />
+        <DealDetail deal={deal} plotSale={unitSale ? "unit" : "plot"} unitType={sale.label} />
       </div>
     );
   }
@@ -106,18 +107,19 @@ export default function ClosedDealDetailPage() {
   );
 }
 
-function DealDetail({ deal, plotSale = false }: { deal: ClosedListing; plotSale?: boolean }) {
+/** plotSale: set when this is one plot or unit sold from an estate; unitType is the unit type sold. */
+function DealDetail({ deal, plotSale, unitType }: { deal: ClosedListing; plotSale?: "plot" | "unit"; unitType?: string }) {
   const { closing } = deal;
   const days = daysToClose(deal);
   const facts: Array<[string, string]> = [
     [deal.dealType === "jv" ? "Agreed land value" : "Final sale price", formatNaira(closing.finalAmount)],
     [
-      deal.dealType === "jv" ? "Listed land value" : plotSale ? "Plot's asking price" : "Asking price",
+      deal.dealType === "jv" ? "Listed land value" : plotSale === "unit" ? "Unit's asking price" : plotSale ? "Plot's asking price" : "Asking price",
       isLandValueTbd(deal) ? "To be determined" : deal.price ? formatNaira(deal.price) : "Not set",
     ],
     ["Facilitation fee", closing.facilitationFee ? formatNaira(closing.facilitationFee) : "None recorded"],
-    [plotSale ? "Plot size" : "Size", formatSize(deal.sizeSqm)],
-    ["Size", deal.sizeSqm > 0 ? formatSize(deal.sizeSqm) : "Not stated"],
+    ...(unitType ? ([["Unit type", unitType]] as Array<[string, string]>) : []),
+    [plotSale === "plot" ? "Plot size" : "Size", deal.sizeSqm > 0 ? formatSize(deal.sizeSqm) : "Not stated"],
     ["Title document", deal.titleDocument],
     ["Location", `${deal.area}, ${deal.city}, ${deal.state}`],
   ];
@@ -144,13 +146,13 @@ function DealDetail({ deal, plotSale = false }: { deal: ClosedListing; plotSale?
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1.5">
               <DealTypePill dealType={deal.dealType} />
-              {plotSale ? <Pill tone="gold">Plot sold</Pill> : <Pill tone="success">Closed</Pill>}
+              {plotSale ? <Pill tone="gold">{plotSale === "unit" ? "Unit sold" : "Plot sold"}</Pill> : <Pill tone="success">Closed</Pill>}
             </div>
             <p className="mt-2 text-sm text-muted">
               {deal.area}, {deal.city}, {deal.state}{deal.sizeSqm > 0 ? ` · ${formatSize(deal.sizeSqm)}` : ""} · {deal.titleDocument}
             </p>
             <Link to={`/listings/${deal.id}`} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gold-deep hover:underline">
-              <FaPen aria-hidden="true" /> {plotSale ? "Open the estate and its plot sales" : "Edit listing or closing details"}
+              <FaPen aria-hidden="true" /> {plotSale ? `Open the estate and its ${plotSale} sales` : "Edit listing or closing details"}
             </Link>
           </div>
         </div>
