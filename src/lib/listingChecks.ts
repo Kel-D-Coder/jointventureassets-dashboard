@@ -1,6 +1,7 @@
 import type { ListingInput } from "@/lib/api";
 import { isVideoUrl } from "@/lib/videoWatermark";
 import { splitTitles, SHARING_TBD } from "@/data/labels";
+import { isBlankRichText } from "@/lib/richText";
 
 /** The company, used as a listing's owner unless another owner is entered. */
 export const COMPANY_OWNER = "Joint Venture Assets";
@@ -44,7 +45,7 @@ const checks: Check[] = [
   { field: "price", label: "Price", message: "Enter an amount in naira, or tick TBD for a joint venture.", passes: (l) => l.price > 0 || (l.dealType === "jv" && Boolean(l.landValueTbd)) },
   { field: "area", label: "Area", message: "Add the area.", passes: (l) => Boolean(l.area.trim()) },
   { field: "city", label: "City", message: "Add the city.", passes: (l) => Boolean(l.city.trim()) },
-  { field: "description", label: "Description", message: "Describe the property.", passes: (l) => Boolean(l.description.trim()) },
+  { field: "description", label: "Description", message: "Describe the property.", passes: (l) => !isBlankRichText(l.description) },
   { field: "ownerName", label: "Owner", message: "Enter the owner's name.", passes: (l) => Boolean(l.ownerName.trim()) },
   {
     field: "sharingNegotiable",

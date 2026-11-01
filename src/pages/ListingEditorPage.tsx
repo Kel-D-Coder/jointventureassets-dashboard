@@ -37,6 +37,8 @@ import {
 import { PaymentPlanFields } from "@/components/PaymentPlanFields";
 import { PlotSalesCard } from "@/components/PlotSalesCard";
 import { ListingViewersCard } from "@/components/ListingViewersCard";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { isBlankRichText } from "@/lib/richText";
 
 /** Form values — numbers stay as strings while they're being typed. */
 interface Draft {
@@ -267,7 +269,7 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     price: cheapest ? cheapest.price : draft.dealType === "jv" && draft.landValueTbd ? 0 : Number(draft.price) || 0,
     landValueTbd: draft.dealType === "jv" && draft.landValueTbd ? true : undefined,
     titleDocument: draft.titleDocument,
-    description: draft.description.trim(),
+    description: isBlankRichText(draft.description) ? "" : draft.description,
     highlights: draft.highlights.split("\n").map((line) => line.trim()).filter(Boolean),
     ...splitMedia(draft.images),
     supportedDocuments: draft.documents,
@@ -703,7 +705,7 @@ export default function ListingEditorPage() {
                 <input value={draft.state} onChange={(e) => set("state", e.target.value)} className={inputClass} />
               </Field>
               <Field label="Description" error={errors.description} className="sm:col-span-3">
-                <textarea rows={5} value={draft.description} onChange={(e) => set("description", e.target.value)} className={inputClass} />
+                <RichTextEditor value={draft.description} onChange={(html) => set("description", html)} invalid={Boolean(errors.description)} />
               </Field>
               <Field label="Highlights" hint="One per line, shown as a checklist on the website." className="sm:col-span-3">
                 <textarea rows={3} value={draft.highlights} onChange={(e) => set("highlights", e.target.value)} className={inputClass} />

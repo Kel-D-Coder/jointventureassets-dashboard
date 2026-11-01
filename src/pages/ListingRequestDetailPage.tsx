@@ -13,6 +13,7 @@ import { BackLink, Button, Card, CardTitle, DeleteButton, Field, Notice, PageHea
 import type { ListingSubmission, SubmittedDocument } from "@/types";
 import { isVideoUrl } from "@/lib/videoWatermark";
 import { joinMedia } from "@/lib/videoWatermark";
+import { cleanRichText } from "@/lib/richText";
 
 export default function ListingRequestDetailPage() {
   const { submissionId = "" } = useParams();
@@ -210,7 +211,7 @@ function SubmissionDetail({
           </div>
         ) : null}
 
-        <p className="mt-6 text-sm leading-relaxed whitespace-pre-line text-fg">{listing.description}</p>
+        <div className="rich-text mt-6 text-sm leading-relaxed text-fg" dangerouslySetInnerHTML={{ __html: cleanRichText(listing.description) }} />
         {listing.highlights.length ? (
           <ul className="mt-4 flex flex-wrap gap-2">
             {listing.highlights.map((highlight) => (
