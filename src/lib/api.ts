@@ -8,7 +8,6 @@
  * Contact messages come from /admin/messages, and enquiries sent from the
  * website (POST /enquiries) from /admin/enquiries.
  */
-import { demoEnquiries, demoMessages, demoSend } from "@/lib/demoApi";
 import { readStored, removeStored } from "@/lib/storage";
 import { fileExtension, joinMedia, splitMedia } from "@/lib/videoWatermark";
 import { readPaymentPlan, readPlotOptions } from "@/data/labels";
@@ -30,32 +29,6 @@ import type {
 const BASE = ((import.meta.env.VITE_SERVER_URL as string | undefined) ?? "https://jva-server-x6te.onrender.com/api/v1").replace(/\/$/, "");
 export const SESSION_KEY = "jva-admin-session";
 
-/**
- * The demo admin login, shown on the sign-in page. It works without the server and shows the demo
- * enquiries and messages in demoApi.ts. Nothing is sent to the server while it's in use, so the
- * other pages say to sign in with a real admin account instead.
- */
-export const DEMO_ADMIN = { email: "admin@jointventureassets.com", password: "admin123" };
-const DEMO_TOKEN = "demo";
-const DEMO_NO_SERVER = "You're signed in with the demo login, which only covers enquiries and messages. Sign in with your JVA admin account to load this from the server.";
-
-/** True while signed in with the demo login: enquiries and messages then read and write the demo data. */
-export function isDemoSession(): boolean {
-  return token() === DEMO_TOKEN;
-}
-
-/** Calls `demo`'s version of each function in demo mode, and `server`'s otherwise. */
-function demoAware<T extends object>(server: T, demo: T): T {
-  const picked = {} as Record<string, unknown>;
-  for (const key of Object.keys(server)) {
-    picked[key] = (...args: unknown[]) => {
-      const source = (isDemoSession() ? demo : server) as Record<string, (...args: unknown[]) => unknown>;
-      return source[key](...args);
-    };
-  }
-  return picked as T;
-}
-
 /** Render's free tier sleeps; the first request after a while can take most of a minute. */
 const TIMEOUT_MS = 60_000;
 
@@ -67,8 +40,6 @@ async function call<T>(path: string, init: RequestInit = {}, { auth = true }: { 
   const headers: Record<string, string> = {};
   if (init.body && !(init.body instanceof FormData)) headers["Content-Type"] = "application/json";
   const bearer = auth ? token() : undefined;
-  // The demo login has no server account: nothing is sent until a real admin signs in.
-  if (bearer === DEMO_TOKEN) throw new Error(DEMO_NO_SERVER);
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
 
   let response: Response;
@@ -110,9 +81,6 @@ interface LoginResponse {
 export const auth = {
   /** POST /admin/login: only admin accounts are let in; the server rejects anyone else. */
   login: async (email: string, password: string): Promise<AdminSession> => {
-    if (email.trim().toLowerCase() === DEMO_ADMIN.email && password === DEMO_ADMIN.password) {
-      return { name: "JVA Admin (demo)", email: DEMO_ADMIN.email, token: DEMO_TOKEN, expiresAt: Date.now() + 8 * 60 * 60 * 1000 };
-    }
     const body = await call<LoginResponse>("/admin/login", { method: "POST", body: JSON.stringify({ email: email.trim(), password }) }, { auth: false });
     const reply = { ...body.data, ...body };
     const token = reply.token ?? reply.accessToken ?? reply.access_token;
@@ -504,13 +472,10 @@ const serverAccounts = {
   /** Registered members. Admin accounts are left out. */
   list: async (): Promise<MemberAccount[]> => {
     const body = await call<unknown>("/admin/users");
-    // TODO: remove once the response shape is confirmed.
-    console.log("[GET /admin/users] response:", body);
     return byNewest(pickList<ServerUser>(body, "users", "accounts").map(toAccount)).filter((account) => account.role !== "Admin");
   },
   get: async (id: string): Promise<MemberAccount> => {
     const body = await call<unknown>(`/admin/users/${path(id)}`);
-    console.log(`[GET /admin/users/${id}] response:`, body);
     return toAccount(pickOne<ServerUser>(body, "user", "account"));
   },
   /**
@@ -519,9 +484,7 @@ const serverAccounts = {
    */
   setStatus: async (id: string, status: AccountStatus, note?: string): Promise<MemberAccount> => {
     const payload = note?.trim() ? { status, note: note.trim() } : { status };
-    console.log(`[PATCH /admin/users/${id}/status] sending:`, payload);
     const body = await call<unknown>(`/admin/users/${path(id)}/status`, { method: "PATCH", body: JSON.stringify(payload) });
-    console.log(`[PATCH /admin/users/${id}/status] response:`, body);
     return toAccount(pickOne<ServerUser>(body, "user", "account"));
   },
 };
@@ -640,15 +603,14 @@ export interface SignatureRequest {
  * TODO(backend): replace with the real endpoint, e.g. POST /admin/documents/send-for-signature.
  */
 export async function sendDocumentForSignature(_request: SignatureRequest): Promise<void> {
-  if (isDemoSession()) return demoSend();
   throw new Error("The server doesn't have an endpoint for sending documents to sign yet.");
 }
 
-// --- Server or demo data ----------------------------------------------------
+// --- Exports -----------------------------------------------------------------
 
 export const listingSubmissions = serverListingSubmissions;
 export const listings = serverListings;
 export const requests = serverRequests;
 export const accounts = serverAccounts;
-export const inboxEnquiries = demoAware(serverInboxEnquiries, demoEnquiries);
-export const messages = demoAware(serverMessages, demoMessages);
+export const inboxEnquiries = serverInboxEnquiries;
+export const messages = serverMessages;

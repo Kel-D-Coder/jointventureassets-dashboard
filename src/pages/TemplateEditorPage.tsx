@@ -163,7 +163,7 @@ function TemplateEditor({ template }: { template: DocumentTemplate }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-muted">Demo mode: emails go out once the backend is connected.</p>
+            <p className="mt-3 text-xs text-muted">The server can't email documents for signing yet.</p>
           </Card>
         ) : null}
       </div>

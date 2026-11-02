@@ -208,7 +208,7 @@ function MemberDetail({
         {canRemind ? (
           <p className="mt-3 text-xs text-muted">
             {remindedAt
-              ? `Reminder requested at ${formatDateTime(remindedAt.toISOString())}. Emails go out once the backend is connected; in demo mode nothing is sent.`
+              ? `Reminder requested at ${formatDateTime(remindedAt.toISOString())}. The server can't email reminders yet, so contact the member directly.`
               : !member.profileCompleted
                 ? "This member hasn't finished their profile. Send a reminder, or wait before approving."
                 : "This investor hasn't uploaded a company profile. Send a reminder, or wait before approving."}

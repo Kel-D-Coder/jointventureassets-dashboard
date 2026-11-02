@@ -1,6 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  FaArrowRotateLeft,
   FaArrowUpRightFromSquare,
   FaBuilding,
   FaChartPie,
@@ -16,8 +15,6 @@ import {
 } from "react-icons/fa6";
 import { logout, useSession } from "@/hooks/useAuth";
 import { useNavCounts } from "@/hooks/useNavCounts";
-import { isDemoSession } from "@/lib/api";
-import { resetDemoData } from "@/lib/demoApi";
 import { cx, initials } from "@/lib/format";
 import { websiteUrl } from "@/data/site";
 
@@ -68,12 +65,6 @@ export function Layout() {
   const signOut = () => {
     logout();
     navigate("/login", { replace: true });
-  };
-
-  const resetData = () => {
-    if (!window.confirm("Put every demo enquiry and message back the way it started?")) return;
-    resetDemoData();
-    window.location.reload();
   };
 
   return (
@@ -164,20 +155,6 @@ export function Layout() {
             ) : null}
           </p>
           <div className="flex items-center gap-2">
-            {isDemoSession() ? (
-              <>
-                <span className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-gold-soft/70 px-2.5 py-1 text-[0.6875rem] font-semibold text-gold-deep">
-                  <span className="h-1.5 w-1.5 rounded-full bg-gold" /> Demo data
-                </span>
-                <button
-                  type="button"
-                  onClick={resetData}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium text-muted hover:bg-fg/[0.05] hover:text-fg"
-                >
-                  <FaArrowRotateLeft aria-hidden="true" /> Reset demo
-                </button>
-              </>
-            ) : null}
             <a
               href={websiteUrl()}
               target="_blank"

@@ -8,8 +8,8 @@ const NO_SESSION: AdminSession | null = null;
 /** The signed-in admin, or null when signed out or the session has expired. */
 export function useSession(): AdminSession | null {
   const stored = useStored(SESSION_KEY, NO_SESSION);
-  // Sessions saved by the old demo login have no server token; they count as signed out.
-  return useMemo(() => (stored?.token && stored.expiresAt > Date.now() ? stored : null), [stored]);
+  // Sessions saved by the old demo login ("demo" token) count as signed out.
+  return useMemo(() => (stored?.token && stored.token !== "demo" && stored.expiresAt > Date.now() ? stored : null), [stored]);
 }
 
 /** Signs in and keeps the session in this browser. */

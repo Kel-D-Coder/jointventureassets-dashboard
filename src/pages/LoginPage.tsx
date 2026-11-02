@@ -2,7 +2,6 @@ import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa6";
 import { useLogin, useSession } from "@/hooks/useAuth";
-import { DEMO_ADMIN } from "@/lib/api";
 import { websiteUrl } from "@/data/site";
 import { Field, inputClass } from "@/ui";
 
@@ -29,11 +28,6 @@ export default function LoginPage() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Couldn't sign in. Try again.");
     }
-  };
-
-  const fillDemo = () => {
-    setEmail(DEMO_ADMIN.email);
-    setPassword(DEMO_ADMIN.password);
   };
 
   return (
@@ -110,16 +104,6 @@ export default function LoginPage() {
           <p className="mt-6 rounded-xl border border-fg/10 bg-raised p-4 text-sm text-muted">
             Sign in with your JVA admin account. The first sign-in can take up to a minute while the server wakes up.
           </p>
-
-          <div className="mt-4 rounded-xl border border-gold/30 bg-gold-soft/50 p-4 text-sm">
-            <p className="font-semibold text-fg">Testing with the demo login</p>
-            <p className="mt-1 text-muted">
-              {DEMO_ADMIN.email} / {DEMO_ADMIN.password}
-            </p>
-            <button type="button" onClick={fillDemo} className="mt-2 text-sm font-semibold text-gold-deep underline underline-offset-4">
-              Fill in the demo login
-            </button>
-          </div>
 
           <p className="mt-6 text-xs text-muted">
             <a href={websiteUrl()} className="font-semibold hover:text-fg">

@@ -382,9 +382,8 @@ export default function ListingEditorPage() {
       // Moving to another page in the dashboard: save to Drafts in the background.
       if (!hasUnsavedDraft()) return;
       const input = toInput(latestRef.current, "draft");
-      (listingId ? listings.update(listingId, input) : listings.create(input)).catch((caught: Error) =>
-        console.error("Couldn't save the draft when leaving the page:", caught.message),
-      );
+      // Best effort: the page is already gone, so there's nowhere to show an error.
+      (listingId ? listings.update(listingId, input) : listings.create(input)).catch(() => undefined);
     };
     // Runs once per listing; the refs carry the latest form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
