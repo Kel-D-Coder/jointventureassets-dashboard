@@ -55,6 +55,8 @@ export interface Listing {
   landValueTbd?: boolean;
   /** Sales: the facilitation fee the seller agreed to pay JVA. Estates set their own rate (at least 5%). */
   saleTerms?: { acceptedFeeTerms: true; feeRate: number };
+  /** Sales: false when the buyer pays no facilitation fee (e.g. estate land where only the seller pays). Missing means the buyer pays. */
+  buyerPaysFee?: boolean;
   /** Estates: the plot sizes on offer, each with its own price. sizeSqm and price then hold the cheapest plot. */
   plotOptions?: PlotOption[];
   /** Estates: "plots" (plots of land) or "units" (houses / apartments). */

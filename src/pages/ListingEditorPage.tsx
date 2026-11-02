@@ -95,6 +95,8 @@ interface Draft {
   verified: boolean;
   /** Sale listings: how open the asking price is. */
   priceNegotiable: "" | PriceNegotiable;
+  /** Sale listings: whether the buyer pays JVA's facilitation fee on top of the price. Estate plots never charge the buyer. */
+  buyerPaysFee: boolean;
   /** The website listing submission this came from, if any. */
   sourceSubmissionId?: string;
 }
@@ -136,6 +138,7 @@ const emptyDraft: Draft = {
   closing: closingDraft(),
   featured: false,
   verified: false,
+  buyerPaysFee: true,
   priceNegotiable: "",
 };
 
@@ -165,7 +168,7 @@ function draftFromListing(listing: Listing): Draft {
     isEstate: isEstate(listing),
     estateType: estateKind(listing),
     paymentPlan: paymentPlanDraftFrom(listing.paymentPlan),
-    estateFeePercent: isEstate(listing) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
+    estateFeePercent: (isEstate(listing) || listing.buyerPaysFee === false) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
     plotRows: plotRowsFrom(listing.plotOptions),
     sales: listing.sales ?? [],
     titleDocument: listing.titleDocument,
@@ -189,6 +192,7 @@ function draftFromListing(listing: Listing): Draft {
     featured: listing.featured,
     verified: listing.verified,
     priceNegotiable: listing.priceNegotiable ?? "",
+    buyerPaysFee: listing.buyerPaysFee !== false,
     sourceSubmissionId: listing.sourceSubmissionId,
   };
 }
@@ -198,6 +202,7 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
   return {
     ...emptyDraft,
     priceNegotiable: listing.priceNegotiable ?? "",
+    buyerPaysFee: listing.buyerPaysFee !== false,
     title: listing.title,
     dealType: listing.dealType,
     propertyType: listing.propertyType,
@@ -210,7 +215,7 @@ function draftFromSubmission(submission: ListingSubmission): Draft {
     isEstate: isEstate(listing),
     estateType: estateKind(listing),
     paymentPlan: paymentPlanDraftFrom(listing.paymentPlan),
-    estateFeePercent: isEstate(listing) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
+    estateFeePercent: (isEstate(listing) || listing.buyerPaysFee === false) && listing.saleTerms?.feeRate ? ratePercent(listing.saleTerms.feeRate) : "",
     plotRows: plotRowsFrom(listing.plotOptions),
     titleDocument: listing.titleDocument,
     description: listing.description,
@@ -253,6 +258,9 @@ function draftFromRequest(request: PartnerRequest): Draft {
   };
 }
 
+/** The seller sets their own fee to JVA (at least 5%) on an estate, or when the buyer pays no fee. */
+const setsOwnFee = (draft: Draft) => draft.dealType === "sale" && (draft.isEstate || !draft.buyerPaysFee);
+
 function toInput(draft: Draft, status: ListingStatus): ListingInput {
   const estate = draft.dealType === "sale" && draft.isEstate;
   // Cheapest first; the cheapest also fills the usual size, price and negotiable fields.
@@ -294,12 +302,14 @@ function toInput(draft: Draft, status: ListingStatus): ListingInput {
     plotOptions: plots,
     estateType: estate ? draft.estateType : undefined,
     paymentPlan: estate ? paymentPlanFrom(draft.paymentPlan) : undefined,
-    // Estates: the seller's facilitation fee, at the rate entered.
-    saleTerms: estate && !estateFeeProblem(draft.estateFeePercent) ? { acceptedFeeTerms: true, feeRate: Number(draft.estateFeePercent) / 100 } : undefined,
+    // Estates, and sales where the buyer pays no fee: the seller's facilitation fee, at the rate entered.
+    saleTerms: setsOwnFee(draft) && !estateFeeProblem(draft.estateFeePercent) ? { acceptedFeeTerms: true, feeRate: Number(draft.estateFeePercent) / 100 } : undefined,
     status,
     closing: status === "closed" ? toClosing(draft.closing) : undefined,
     featured: draft.featured,
     verified: draft.verified,
+    // Sent either way, so switching it back to "yes" is saved too. Estate plots never charge the buyer.
+    buyerPaysFee: draft.dealType === "sale" ? draft.buyerPaysFee : undefined,
     priceNegotiable: cheapest ? cheapest.priceNegotiable : draft.dealType === "sale" && draft.priceNegotiable ? draft.priceNegotiable : undefined,
     sourceSubmissionId: draft.sourceSubmissionId,
   };
@@ -431,7 +441,7 @@ export default function ListingEditorPage() {
     const plotProblem = estate ? plotRowsProblem(draft.plotRows, draft.estateType) : undefined;
     const missing = missingFor(toInput(draft, status)).filter((check) => !(estate && ["sizeSqm", "price", "priceNegotiable"].includes(check.field)));
     if (plotProblem) missing.push({ field: "plotOptions", label: draft.estateType === "units" ? "Unit types" : "Plot sizes", message: plotProblem, passes: () => false });
-    const feeProblem = estate ? estateFeeProblem(draft.estateFeePercent) : undefined;
+    const feeProblem = setsOwnFee(draft) ? estateFeeProblem(draft.estateFeePercent) : undefined;
     if (feeProblem) missing.push({ field: "estateFeePercent", label: "Facilitation fee", message: feeProblem, passes: () => false });
     const closingProblemsNow = status === "closed" ? closingErrors(draft.closing) : {};
     setClosingProblems(closingProblemsNow);
@@ -630,6 +640,38 @@ export default function ListingEditorPage() {
                   ))}
                 </div>
                 {errors.priceNegotiable ? <span className="mt-1 block text-xs font-medium text-danger">{errors.priceNegotiable}</span> : null}
+              </fieldset>
+            ) : null}
+            {draft.dealType === "sale" && !(draft.isEstate && draft.estateType === "plots") ? (
+              <fieldset className="mt-5">
+                <legend className="mb-1.5 block text-[0.8125rem] font-medium text-fg">Does the buyer pay a facilitation fee?</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {([
+                    [true, "Yes, the buyer pays the fee on top"],
+                    [false, "No, the buyer pays no fee"],
+                  ] as const).map(([value, label]) => (
+                    <label
+                      key={label}
+                      className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-fg/[0.13] px-3 py-2 text-sm text-fg shadow-xs has-checked:border-gold has-checked:bg-gold-soft/40"
+                    >
+                      <input type="radio" name="buyerPaysFee" checked={draft.buyerPaysFee === value} onChange={() => set("buyerPaysFee", value)} className="accent-[#c9a24a]" />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <span className="mt-1 block text-xs text-muted">
+                  &ldquo;Yes&rdquo;: buyer and seller each pay JVA 5%. &ldquo;No&rdquo;: only the seller pays JVA, at the rate below, and the website shows buyers no fee terms.
+                </span>
+                {!draft.buyerPaysFee && !draft.isEstate ? (
+                  <Field
+                    label="Facilitation fee to JVA (%)"
+                    error={errors.estateFeePercent}
+                    hint={`Required, at least ${MIN_ESTATE_FEE_PERCENT}%. Paid to JVA by the seller from the sale price.`}
+                    className="mt-4 sm:max-w-xs"
+                  >
+                    <input inputMode="decimal" value={draft.estateFeePercent} onChange={(e) => set("estateFeePercent", percentDigits(e.target.value))} placeholder="e.g. 5" className={inputClass} />
+                  </Field>
+                ) : null}
               </fieldset>
             ) : null}
           </Card>

@@ -73,6 +73,8 @@ export interface SubmittedListing {
   ownerName: string;
   /** Sale listings: the seller agreed to pay JVA's facilitation fee out of the sale price. */
   saleTerms?: { acceptedFeeTerms: true; feeRate: number };
+  /** Sales: false when the buyer pays no facilitation fee. Missing means the buyer pays. */
+  buyerPaysFee?: boolean;
   /** Sale listings: whether the asking price is negotiable. */
   priceNegotiable?: "negotiable" | "slightly_negotiable" | "fixed";
   /** Joint ventures: the land value is still to be determined (price is then 0). */

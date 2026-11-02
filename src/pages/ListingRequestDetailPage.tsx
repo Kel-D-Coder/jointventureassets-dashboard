@@ -168,6 +168,11 @@ function SubmissionDetail({
             <Fact label="Price negotiable">{listing.priceNegotiable ? priceNegotiableLabel[listing.priceNegotiable] : "Not stated"}</Fact>
           ) : null}
           {listing.dealType === "sale" ? (
+            <Fact label="Buyer's facilitation fee">
+              {isEstate(listing) && estateKind(listing) === "plots" ? "None (estate plots)" : listing.buyerPaysFee === false ? "None, the buyer pays no fee" : "Buyer pays the fee on top"}
+            </Fact>
+          ) : null}
+          {listing.dealType === "sale" ? (
             <div className="sm:col-span-2">
               <Fact label="Seller's facilitation fee">
                 {listing.saleTerms?.acceptedFeeTerms
